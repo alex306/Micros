@@ -1,0 +1,53 @@
+#include <hidef.h> /* for EnableInterrupts macro */
+#include "derivative.h" /* include peripheral declarations */
+
+unsigned char contador_40ms = 0;
+unsigned char contador_15ms = 0;
+unsigned char generar_40ms = 0;
+unsigned char generar_15ms = 0;
+unsigned char delay_40_15;
+
+interrupt 7 void RTI_TPM(void){
+	(void)TPMSC;
+	TPMSC_TOF = 0; //Timer Overflow Flag
+	//contador_40ms++;
+	if(contador_40ms < 40){
+		contador_40ms++;
+		if(contador_40ms == 40){
+			generar_40ms=1;
+		}
+	}
+	if(generar_40ms == 1){
+		contador_15ms++;
+		if(generar_15ms == 15){
+			delay_40_15 = 1;
+		}
+	}
+}
+
+void lcd_init(void){ // Se puede llamar antes del main o una sola vez en el while infinito
+	if(generar_40ms == 1){
+		generar_40ms=0;
+		PTBD = 0b00001100;
+	}
+	if(delay_40_15 == 1){
+		PTBD = 0b00001100;
+	}
+}
+
+void main(void) {
+	/*          Configuracion TIMER          */    
+	// (PS * TPMMOD) / FrecuencyCLK
+	// Bus clock = 4 Mhz, Preescaler = 4   
+	TPMSC = 0b01001010; // 1 µs
+	TPMMOD = 1000; // 1 ms
+
+	PTBDD=0xF0;
+	
+	lcd_init();
+	
+	EnableInterrupts;
+	for(;;) {
+		__RESET_WATCHDOG();	/* feeds the dog */
+	} 
+}
