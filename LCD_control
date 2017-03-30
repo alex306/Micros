@@ -1,37 +1,175 @@
 #include <hidef.h> /* for EnableInterrupts macro */
 #include "derivative.h" /* include peripheral declarations */
 
-unsigned char contador_40ms = 0;
-unsigned char contador_15ms = 0;
-unsigned char generar_40ms = 0;
-unsigned char generar_15ms = 0;
-unsigned char delay_40_15;
+enum states{
+	POWER_ON,
+	FUNCTION_SET_2,
+	FUNCTION_SET_3,
+	FUNCTION_SET_4,
+	FUNCTION_SET_5,
+	FUNCTION_SET_6,
+	FUNCTION_SET_7,
+	FUNCTION_SET_8
+};
+enum states state;
+enum states next_state;
+
+unsigned char interruption_flag;
+unsigned char flag = 0;
+unsigned char initialization_ends = 0;
+unsigned char EN = 0;
+unsigned char RS = 0;
+unsigned char counter = 0;
 
 interrupt 7 void RTI_TPM(void){
 	(void)TPMSC;
 	TPMSC_TOF = 0; //Timer Overflow Flag
-	//contador_40ms++;
-	if(contador_40ms < 40){
-		contador_40ms++;
-		if(contador_40ms == 40){
-			generar_40ms=1;
-		}
-	}
-	if(generar_40ms == 1){
-		contador_15ms++;
-		if(generar_15ms == 15){
-			delay_40_15 = 1;
-		}
-	}
+	interruption_flag = 1;
+	//flag = 1;
+	//next_state = state;
 }
 
-void lcd_init(void){ // Se puede llamar antes del main o una sola vez en el while infinito
-	if(generar_40ms == 1){
-		generar_40ms=0;
-		PTBD = 0b00001100;
+void lcd_inicialization(void)
+{
+	if(state == POWER_ON)
+	{
+		if(counter == 120){ // 100 ms
+			counter = 0;
+			EN = 1;
+			RS = 0;
+			PTAD_PTAD3 = 0;
+			PTAD_PTAD2 = 0;
+			PTAD_PTAD1 = 1;
+			PTAD_PTAD0 = 1;
+			PTBD_PTBD3 = EN;
+			PTBD_PTBD2 = RS;
+			state = FUNCTION_SET_2;
+			TPMMOD = 1;
+		}
+		else{
+			counter++;
+		}
 	}
-	if(delay_40_15 == 1){
-		PTBD = 0b00001100;
+	if(state == FUNCTION_SET_2)
+	{
+		if(counter == 32){ // 32 us
+			counter = 0;
+			EN = 0;
+			RS = 0;
+			PTBD_PTBD3 = EN;
+			PTBD_PTBD2 = RS;
+			state = FUNCTION_SET_3;
+			TPMMOD = 1000;
+		}
+		else{
+			counter++;
+		}
+	}
+	if(state == FUNCTION_SET_3)
+	{
+		if(counter == 4){ // 4 ms
+			counter = 0;
+			EN = 1;
+			RS = 0;
+			PTAD_PTAD3 = 0;
+			PTAD_PTAD2 = 0;
+			PTAD_PTAD1 = 1;
+			PTAD_PTAD0 = 1;
+			PTBD_PTBD3 = EN;
+			PTBD_PTBD2 = RS;
+			state = FUNCTION_SET_4;
+			TPMMOD = 1;
+		}
+		else{
+			counter++;
+		}
+	}
+	if(state == FUNCTION_SET_4)
+	{
+		if(counter == 32){ // 32 us
+			counter = 0;
+			EN = 0;
+			RS = 0;
+			PTBD_PTBD3 = EN;
+			PTBD_PTBD2 = RS;
+			state = FUNCTION_SET_5;
+			TPMMOD = 1000;
+		}
+		else{
+			counter++;
+		}
+	}
+	if(state == FUNCTION_SET_5)
+	{
+		if(counter == 100){ // 100 ms
+			counter = 0;
+			EN = 1;
+			RS = 0;
+			PTAD_PTAD3 = 0;
+			PTAD_PTAD2 = 0;
+			PTAD_PTAD1 = 1;
+			PTAD_PTAD0 = 1;
+			PTBD_PTBD3 = EN;
+			PTBD_PTBD2 = RS;
+			state = FUNCTION_SET_6;
+			TPMMOD = 1;
+		}
+		else{
+			counter++;
+		}
+	}
+	if(state == FUNCTION_SET_6)
+	{
+		if(counter == 32){ // 32 us
+			counter = 0;
+			EN = 0;
+			RS = 0;
+			PTBD_PTBD3 = EN;
+			PTBD_PTBD2 = RS;
+			state = FUNCTION_SET_7;
+			TPMMOD = 1;
+		}
+		else{
+			counter++;
+		}
+	}
+	if(state == FUNCTION_SET_7)
+	{
+		if(counter == 100){ // 100 us
+			counter = 0;
+			EN = 1;
+			RS = 0;
+			PTAD_PTAD3 = 0;
+			PTAD_PTAD2 = 0;
+			PTAD_PTAD1 = 1;
+			PTAD_PTAD0 = 0;
+			PTBD_PTBD3 = EN;
+			PTBD_PTBD2 = RS;
+			state = FUNCTION_SET_8;
+			TPMMOD = 1;
+		}
+		else{
+			counter++;
+		}
+	}
+	if(state == FUNCTION_SET_8)
+	{
+		if(counter == 32){ // 32 us
+			counter = 0;
+			EN = 0;
+			RS = 0;
+			PTAD_PTAD3 = 0;
+			PTAD_PTAD2 = 0;
+			PTAD_PTAD1 = 1;
+			PTAD_PTAD0 = 0;
+			PTBD_PTBD3 = EN;
+			PTBD_PTBD2 = RS;
+			//state = FUNCTION_SET_8;
+			TPMMOD = 1;
+		}
+		else{
+			counter++;
+		}
 	}
 }
 
@@ -41,13 +179,41 @@ void main(void) {
 	// Bus clock = 4 Mhz, Preescaler = 4   
 	TPMSC = 0b01001010; // 1 µs
 	TPMMOD = 1000; // 1 ms
-
-	PTBDD=0xF0;
 	
-	lcd_init();
-	
+	PTBDD=0xFF;
+	PTADD = 0xFF;
 	EnableInterrupts;
 	for(;;) {
+		if(interruption_flag == 1){
+			interruption_flag = 0;
+			lcd_inicialization();
+		}
+		/*if(led == 1){
+			PTBD_PTBD7 = 1;
+			delay(1000);
+			led = 0;
+		}
+		else{
+			PTBD_PTBD7 = 0;
+			delay(1000);
+			led = 1;
+		}*/
+		/*switch(state){
+
+		case LED_ON:
+			//flag_1s = 0;
+			//PTBD_PTBD7 = 1;
+			delay(1000);
+			state = LED_OFF;
+			break;
+
+		case LED_OFF:
+			//flag_1s = 0;
+			PTBD_PTBD7 = 0;
+			delay(1000);
+			state = LED_ON;
+			break;
+		}*/
 		__RESET_WATCHDOG();	/* feeds the dog */
 	} 
 }
