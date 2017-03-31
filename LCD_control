@@ -1,7 +1,9 @@
 #include <hidef.h> /* for EnableInterrupts macro */
 #include "derivative.h" /* include peripheral declarations */
+#define EN PTBD_PTBD3
+#define RS PTBD_PTBD2
 
-enum states{
+/*enum states{
 	POWER_ON,
 	FUNCTION_SET_2,
 	FUNCTION_SET_3,
@@ -12,14 +14,24 @@ enum states{
 	FUNCTION_SET_8
 };
 enum states state;
-enum states next_state;
+enum states next_state;*/
 
-unsigned char interruption_flag;
+unsigned char interruption_flag = 0;
 unsigned char flag = 0;
 unsigned char initialization_ends = 0;
-unsigned char EN = 0;
-unsigned char RS = 0;
+//unsigned char EN = 0;
+//unsigned char RS = 0;
 unsigned char counter = 0;
+unsigned char power_on = 1;
+/*unsigned char function_set_2 = 2;
+unsigned char function_set_3 = 3;
+unsigned char function_set_4 = 4;
+unsigned char function_set_5 = 5;
+unsigned char function_set_6 = 6;
+unsigned char function_set_7 = 7;
+unsigned char function_set_8 = 8;*/
+unsigned char state = 1;
+//unsigned char initialization_ends = 0;
 
 interrupt 7 void RTI_TPM(void){
 	(void)TPMSC;
@@ -29,147 +41,188 @@ interrupt 7 void RTI_TPM(void){
 	//next_state = state;
 }
 
+void delay(unsigned int tiempo)//genera 1 ms (probar)
+{
+	//delay formula is (PS*(MTIMMOD + 1)) / FrecuencyCLK
+	unsigned int i;
+	MTIMSC = 0;
+	for(i = 0; i < tiempo; i++){
+		do{
+			__RESET_WATCHDOG();
+		}while(MTIMSC_TOF == 0);
+		MTIMSC_TRST = 1;
+	}
+}
+
 void lcd_inicialization(void)
 {
-	if(state == POWER_ON)
+	if(state == 1) //Power on
 	{
-		if(counter == 120){ // 100 ms
-			counter = 0;
-			EN = 1;
-			RS = 0;
-			PTAD_PTAD3 = 0;
-			PTAD_PTAD2 = 0;
-			PTAD_PTAD1 = 1;
-			PTAD_PTAD0 = 1;
-			PTBD_PTBD3 = EN;
-			PTBD_PTBD2 = RS;
-			state = FUNCTION_SET_2;
-			TPMMOD = 1;
-		}
-		else{
-			counter++;
-		}
+		MTIMCLK = 0b00000100; //PS = 16
+		MTIMMOD = 249; // 1ms
+		delay(100);
+		PTBD = 0x30;
+		EN = 1;
+		RS = 0;
+		state = 2;
 	}
-	if(state == FUNCTION_SET_2)
+	else if(state == 2) //function_set_2
 	{
-		if(counter == 32){ // 32 us
-			counter = 0;
-			EN = 0;
-			RS = 0;
-			PTBD_PTBD3 = EN;
-			PTBD_PTBD2 = RS;
-			state = FUNCTION_SET_3;
-			TPMMOD = 1000;
-		}
-		else{
-			counter++;
-		}
+		delay(32);
+		EN = 0;
+		RS = 0;
+		state = 3;
 	}
-	if(state == FUNCTION_SET_3)
+	else if(state == 3) //function_set_3
 	{
-		if(counter == 4){ // 4 ms
-			counter = 0;
-			EN = 1;
-			RS = 0;
-			PTAD_PTAD3 = 0;
-			PTAD_PTAD2 = 0;
-			PTAD_PTAD1 = 1;
-			PTAD_PTAD0 = 1;
-			PTBD_PTBD3 = EN;
-			PTBD_PTBD2 = RS;
-			state = FUNCTION_SET_4;
-			TPMMOD = 1;
-		}
-		else{
-			counter++;
-		}
+		MTIMCLK = 0b00000100; //PS = 16
+		MTIMMOD = 249; // 1ms
+		delay(6);
+		PTBD = 0x30;
+		EN = 1;
+		RS = 0;
+		state = 4;
 	}
-	if(state == FUNCTION_SET_4)
+	else if(state == 4) //function_set_4
 	{
-		if(counter == 32){ // 32 us
-			counter = 0;
-			EN = 0;
-			RS = 0;
-			PTBD_PTBD3 = EN;
-			PTBD_PTBD2 = RS;
-			state = FUNCTION_SET_5;
-			TPMMOD = 1000;
-		}
-		else{
-			counter++;
-		}
+		MTIMCLK = 0b00000010; //PS = 4
+		MTIMMOD = 1; // 1us
+		delay(32);
+		EN = 0;
+		RS = 0;
+		state = 5;
 	}
-	if(state == FUNCTION_SET_5)
+	else if(state == 5) //function_set_5
 	{
-		if(counter == 100){ // 100 ms
-			counter = 0;
-			EN = 1;
-			RS = 0;
-			PTAD_PTAD3 = 0;
-			PTAD_PTAD2 = 0;
-			PTAD_PTAD1 = 1;
-			PTAD_PTAD0 = 1;
-			PTBD_PTBD3 = EN;
-			PTBD_PTBD2 = RS;
-			state = FUNCTION_SET_6;
-			TPMMOD = 1;
-		}
-		else{
-			counter++;
-		}
+		MTIMCLK = 0b00000010; //PS = 4
+		MTIMMOD = 1; // 1us
+		delay(100);
+		PTBD = 0x30;
+		EN = 1;
+		RS = 0;
+		state = 6;
 	}
-	if(state == FUNCTION_SET_6)
+	else if(state == 6) //function_set_6
 	{
-		if(counter == 32){ // 32 us
-			counter = 0;
-			EN = 0;
-			RS = 0;
-			PTBD_PTBD3 = EN;
-			PTBD_PTBD2 = RS;
-			state = FUNCTION_SET_7;
-			TPMMOD = 1;
-		}
-		else{
-			counter++;
-		}
+		delay(32);
+		EN = 0;
+		RS = 0;
+		state = 7;
 	}
-	if(state == FUNCTION_SET_7)
+	else if(state == 7) //function_set_7
 	{
-		if(counter == 100){ // 100 us
-			counter = 0;
-			EN = 1;
-			RS = 0;
-			PTAD_PTAD3 = 0;
-			PTAD_PTAD2 = 0;
-			PTAD_PTAD1 = 1;
-			PTAD_PTAD0 = 0;
-			PTBD_PTBD3 = EN;
-			PTBD_PTBD2 = RS;
-			state = FUNCTION_SET_8;
-			TPMMOD = 1;
-		}
-		else{
-			counter++;
-		}
+		delay(100);
+		PTBD = 0x20;
+		EN = 1;
+		RS = 0;
+		state = 8;
 	}
-	if(state == FUNCTION_SET_8)
+	else if(state == 8) //function_set_8
 	{
-		if(counter == 32){ // 32 us
-			counter = 0;
-			EN = 0;
-			RS = 0;
-			PTAD_PTAD3 = 0;
-			PTAD_PTAD2 = 0;
-			PTAD_PTAD1 = 1;
-			PTAD_PTAD0 = 0;
-			PTBD_PTBD3 = EN;
-			PTBD_PTBD2 = RS;
-			//state = FUNCTION_SET_8;
-			TPMMOD = 1;
-		}
-		else{
-			counter++;
-		}
+		delay(32);
+		EN = 0;
+		RS = 0;
+		state = 9;
+	}
+	else if(state == 9) //function_set_8
+	{
+		delay(100);
+		PTBD = 0x20;
+		EN = 1;
+		RS = 0;
+		delay(50);
+		PTBD = 0x00; //NF**
+		state = 10;
+	}
+	else if(state == 10) //function_set_8
+	{
+		delay(32);
+		EN = 0;
+		RS = 0;
+		state = 11;
+	}
+	else if(state == 11) //function_set_8
+	{
+		delay(55);
+		PTBD = 0x00;
+		EN = 1;
+		RS = 0;
+		delay(50);
+		PTBD = 0x80;
+		state = 12;
+	}
+	else if(state == 12) //function_set_8
+	{
+		delay(32);
+		EN = 0;
+		RS = 0;
+		state = 13;
+	}
+	else if(state == 13) //function_set_8
+	{
+		delay(55);
+		PTBD = 0x00;
+		EN = 1;
+		RS = 0;
+		delay(55);
+		PTBD = 0x01;
+		state = 14;
+	}
+	else if(state == 14) //function_set_8
+	{
+		delay(32);
+		EN = 0;
+		RS = 0;
+		state = 15;
+	}
+	else if(state == 15) //function_set_8
+	{
+		MTIMCLK = 0b00000100; //PS = 16
+		MTIMMOD = 249; // 1ms
+		delay(5);
+		PTBD = 0x00;
+		EN = 1;
+		RS = 0;
+		delay(10);
+		PTBD = 0x60; //0 1 I/D S
+		state = 16;
+	}
+	else if(state == 16) //function_set_8
+	{
+		delay(32);
+		EN = 0;
+		RS = 0;
+		state = 17;
+	}
+	else if(state == 17) //function_set_8
+	{
+		MTIMCLK = 0b00000010; //PS = 4
+		MTIMMOD = 1; // 1us
+		delay(55);
+		EN = 0;
+		RS = 0;
+		state = 18;
+	}
+	else if(state == 18){
+		delay(32);
+		EN = 0;
+		RS = 0;
+		state = 19;
+	}
+	else if(state == 19) //function_set_8
+	{
+		PTBD = 0x00;
+		EN = 1;
+		RS = 0;
+		delay(50);
+		PTBD = 0xF0;
+		state = 20;
+	}
+	else if(state == 20){
+		delay(55);
+		EN = 0;
+		RS = 0;
+		initialization_ends = 1;
 	}
 }
 
@@ -184,10 +237,13 @@ void main(void) {
 	PTADD = 0xFF;
 	EnableInterrupts;
 	for(;;) {
-		if(interruption_flag == 1){
-			interruption_flag = 0;
-			lcd_inicialization();
+		if(initialization_ends == 0){
+			if(interruption_flag == 1){
+				interruption_flag = 0;
+				lcd_inicialization();
+			}
 		}
+		
 		/*if(led == 1){
 			PTBD_PTBD7 = 1;
 			delay(1000);
