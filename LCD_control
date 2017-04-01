@@ -25,186 +25,187 @@ interrupt 12 void RTI_MTIM(void){
 	
 	(void)MTIMSC;
 	MTIMSC_TOF  = 0;
+	interruption_flag = 1;
 }
 
 void init_LCD(void){
 	switch(state){
-	case 1:
+	/* Esperar a que suba el voltaje */
+	case 1:	/* Trigger del estado (0x30)*/
 		PTBD = 0x30; //function_set_1
 		EN = 1;
 		RS = 0;
-		MTIMMOD = 2; // 8us
-		contador_init = 4;
+		MTIMMOD = 1; // 64us
 		break;
 		
-	case 2:
+	case 2:	/* Manda el dato (0x30)*/
 		EN = 0;
 		RS = 0;
-		MTIMMOD = 250; // 1ms
-		contador_init = 6;
+		MTIMMOD = 128; // 8.1ms
 		// > 4 ms
 		// primer envio de cmd
 		break;
-
+/* -----------------------------------------*/	
 	case 3:
 		PTBD = 0x30; //function_set_2
 		EN = 1;
 		RS = 0;
-		MTIMMOD = 2; // 8us
-		contador_init = 4; //32us
+		MTIMMOD = 1; // 8us
 		// > 100us
 		break;
 	
 	case 4:
 		EN = 0;
 		RS = 0;
-		contador_init = 16; //128us
+		MTIMMOD = 4;
 		// segundo envio de cmd
 		break;
-		
+/* -----------------------------------------*/	
 	case 5:
 		PTBD = 0x30;
 		EN = 1;
 		RS = 0;
-		contador_init = 4; //32us
+		MTIMMOD = 1;
 		break;
 		
 	case 6:
 		EN = 0;
 		RS = 0;
-		contador_init = 16; //128us
-		// tercer envio de cmd
+		MTIMMOD = 4;
 		break;
-		
+/* -----------------------------------------*/		
 	case 7:
 		PTBD = 0x20;
 		EN = 1;
 		RS = 0;
-		contador_init = 4; //32us
+		MTIMMOD = 1;
 		break;
 		
 	case 8:
 		EN = 0;
 		RS = 0;
-		contador_init = 16; //128us
-		// seteado en modo de 4 bits
+		MTIMMOD = 4;
 		break;
-		
+/* -----------------------------------------*/			
 	case 9:
 		PTBD = 0x20;
 		EN = 1;
 		RS = 0;
-		contador_init = 4; //32us
+		MTIMMOD = 1;
 		break;
 		
 	case 10:
 		EN = 0;
 		RS = 0;
-		contador_init = 4; //32us
+		MTIMMOD = 1;
 		break;
 		
 	case 11:
 		PTBD = 0x80;
 		EN = 1;
 		RS = 0;
-		contador_init = 4; //32us
+		MTIMMOD = 1;
 		break;
 		
 	case 12:
 		EN = 0;
 		RS = 0;
-		contador_init = 16; //128us	
-		//primer dato enviado en  4 bits
+		MTIMMOD = 4;
 		break;
+		
+/* -----------------------------------------*/		
 		
 	case 13:
 		PTBD = 0x00;
 		EN = 1;
 		RS = 0;
-		contador_init = 4; //32us
+		MTIMMOD = 1;
 		break;
 		
 	case 14:
 		EN = 0;
 		RS = 0;
-		contador_init = 4; //32us
+		MTIMMOD = 1;
 		break;
 		
 	case 15:
 		PTBD = 0x80;
 		EN = 1;
 		RS = 0;
-		contador_init = 4; //32us
-		// segundo dato enviado en 4 bits
+		MTIMMOD = 1;
 		break;
 		
 	case 16:
 		EN = 0;
 		RS = 0;
-		contador_init = 16; //128us		
-		// segundo dato enviado en 4 bits
+		MTIMMOD = 4;
 		break;
+		
+/* -----------------------------------------*/		
 		
 	case 17:
 		PTBD = 0x00;
 		EN = 1;
 		RS = 0;
-		contador_init = 4; //32us
+		MTIMMOD = 1;
 		break;
 		
 	case 18:
 		EN = 0;
 		RS = 0;
-		contador_init = 4; //32us
+		MTIMMOD = 1;
 		break;
 		
 	case 19:
 		PTBD = 0x10;
 		EN = 1;
 		RS = 0;
-		contador_init = 4; //32us
+		MTIMMOD = 1;
 		break;
 		
 	case 20:
 		EN = 0;
 		RS = 0;
-		MTIMMOD = 250; // 1ms
-		contador_init = 5; //5ms
-		// tercer dato enviado en 4 bits
+		MTIMMOD = 96;
 		break;
+
+/* -----------------------------------------*/	
 		
 	case 21:
 		PTBD = 0x00;
 		EN = 1;
 		RS = 0;
-		MTIMMOD = 2; // 1ms
-		contador_init = 4; //32us
+		MTIMMOD = 1;
 		break;
 		
 	case 22:
 		EN = 0;
 		RS = 0;
-		contador_init = 4; //32us
+		MTIMMOD = 1;
 		break;
 	
 	case 23:
 		PTBD = 0x60;
 		EN = 1;
 		RS = 0;
-		contador_init = 4; //32us
+		MTIMMOD = 1;
 		break;
 		
 	case 24:
 		EN = 0;
 		RS = 0;
-		contador_init = 16; //128us		
-		// cuarto dato enviado en 4 bits
+		MTIMMOD = 4;
 		break;
 		
+/* -----------------------------------------*/		
+		
 	case 25:
-		initialization_ends = 1;
+		state--;
 		break;
-	}
+	
+	default:
+		break;
+	}	
 }
 
 void inicialization(void){
@@ -379,9 +380,9 @@ void inicialization(void){
 }
 
 void main(void) {
-	MTIMSC = 0b01000000;
-	MTIMCLK = 0b00000100; //PS = 16
-	MTIMMOD = 250; // 1ms
+	MTIMSC = 0x40;
+	MTIMCLK = 0x08; //PS = 16
+	MTIMMOD = 255; // 1ms
 	
 	PTBDD=0xFF;
 	PTBD = 0x00;
@@ -394,6 +395,13 @@ void main(void) {
 
 	EnableInterrupts;
 	for(;;) {
+		
+		
+		if(interruption_flag == 0x01){
+			interruption_flag = 0x00;
+			init_LCD();
+			state++;	
+		}
 /*		if(interruption_flag == 1){
 			interruption_flag = 0;
 			if(initialization_ends == 0){
