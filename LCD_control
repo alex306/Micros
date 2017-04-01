@@ -101,7 +101,7 @@ void init_LCD(void){
 		break;
 		
 	case 11:
-		PTBD = 0x80;
+		PTBD = 0xA0;
 		EN = 1;
 		RS = 0;
 		MTIMMOD = 1;
@@ -129,7 +129,7 @@ void init_LCD(void){
 		break;
 		
 	case 15:
-		PTBD = 0x80;
+		PTBD = 0xF0;
 		EN = 1;
 		RS = 0;
 		MTIMMOD = 1;
