@@ -4,25 +4,18 @@
 #define RS PTBD_PTBD2
 
 char interruption_flag = 0;
-int contador_timer = 0;
 char state = 0;
-char next_state = 0;
-char contador_init;
+char state2 = 0;
 char initialization_ends = 0;
+char up_bits_letter[] = {0xC0,0x50}; //C,W
+char low_bits_letter[] = {0x30,0x70};//C,W
+char i = 0;
+char j = 0;
 
 void init_LCD(void);
+void send_commands(void);
 
 interrupt 12 void RTI_MTIM(void){
-/*	(void)MTIMSC;
-	MTIMSC_TOF = 0;
-	contador_timer++;
-	if(contador_timer == contador_init){
-		contador_timer = 0;
-		next_state++;
-		state = next_state;
-		interruption_flag = 1;
-	}*/
-	
 	(void)MTIMSC;
 	MTIMSC_TOF  = 0;
 	interruption_flag = 1;
@@ -194,12 +187,15 @@ void init_LCD(void){
 	case 24:
 		EN = 0;
 		RS = 0;
-		MTIMMOD = 4;
+		MTIMMOD = 1;
 		break;
 		
 /* -----------------------------------------*/		
 		
 	case 25:
+		initialization_ends = 1;
+		//state2++;
+		//send_commands();
 		state--;
 		break;
 	
@@ -208,182 +204,82 @@ void init_LCD(void){
 	}	
 }
 
-void inicialization(void){
-	if(state == 1){
-		PTBD = 0x30; //function_set_1
+void send_data(void){
+	
+	switch(state2){
+	
+	case 1:
+		PTBD = up_bits_letter[i++]; //Upper bits
 		EN = 1;
 		RS = 0;
-		MTIMMOD = 2; // 8us
-		contador_init = 4;
-	}
-	else if(state == 2) 
-	{
+		MTIMMOD = 1;
+		break;
+		
+	case 2:
 		EN = 0;
 		RS = 0;
-		MTIMMOD = 250; // 1ms
-		contador_init = 6;
-		// > 4 ms
-		// primer envio de cmd
-	}
-	else if(state == 3) 
-	{
-		PTBD = 0x30; //function_set_2
+		MTIMMOD = 4;
+		break;
+		
+	case 3:
+		PTBD = low_bits_letter[j++]; //Lower bits
 		EN = 1;
 		RS = 0;
-		MTIMMOD = 2; // 8us
-		contador_init = 4; //32us
-		// > 100us
-	}
-	else if(state == 4) //function_set_3
-	{	
+		MTIMMOD = 1;
+		break;
+		
+	case 4:
 		EN = 0;
 		RS = 0;
-		contador_init = 16; //128us
-		// segundo envio de cmd
-	}
-	else if(state == 5) //function_set_4
-	{
-		PTBD = 0x30;
+		MTIMMOD = 4;
+		break;
+	
+	case 5:
+		PTBD = 0x40; //Upper bits
 		EN = 1;
-		RS = 0;
-		contador_init = 4; //32us
-	}
-	else if(state == 6) //function_set_5
-	{
+		RS = 1;
+		MTIMMOD = 1;
+		break;
+
+	case 6:
 		EN = 0;
-		RS = 0;
-		contador_init = 16; //128us
-		// tercer envio de cmd
-	}
-	else if(state == 7) //function_set_6
-	{
-		PTBD = 0x20;
+		RS = 1;
+		MTIMMOD = 4; 
+		break;
+
+	case 7:
+		PTBD = 0x10; //Lower bits
 		EN = 1;
-		RS = 0;
-		contador_init = 4; //32us
-	}
-	else if(state == 8) //function_set_7
-	{
+		RS = 1;
+		MTIMMOD = 1;
+		break;
+
+	case 8:
 		EN = 0;
-		RS = 0;
-		contador_init = 16; //128us
-		// seteado en modo de 4 bits
-	}
-	else if(state == 9) //function_set_8
-	{
-		PTBD = 0x20;
-		EN = 1;
-		RS = 0;
-		contador_init = 4; //32us
-	}
-	else if(state == 10) //function_set_8
-	{
-		EN = 0;
-		RS = 0;
-		contador_init = 4; //32us
-	}
-	else if(state == 11) //function_set_8
-	{
-		PTBD = 0x80;
-		EN = 1;
-		RS = 0;
-		contador_init = 4; //32us
-	}
-	else if(state == 12) //function_set_8
-	{	
-		EN = 0;
-		RS = 0;
-		contador_init = 16; //128us	
-		//primer dato enviado en  4 bits
-	}
-	else if(state == 13) //function_set_8
-	{
-		PTBD = 0x00;
-		EN = 1;
-		RS = 0;
-		contador_init = 4; //32us
-	}
-	else if(state == 14) //function_set_8
-	{
-		EN = 0;
-		RS = 0;
-		contador_init = 4; //32us
-	}
-	else if(state == 15) //function_set_8
-	{
-		PTBD = 0x80;
-		EN = 1;
-		RS = 0;
-		contador_init = 4; //32us
-		// segundo dato enviado en 4 bits
-	}
-	else if(state == 16) //function_set_8
-	{
-		EN = 0;
-		RS = 0;
-		contador_init = 16; //128us		
-		// segundo dato enviado en 4 bits
-	}
-	else if(state == 17) //function_set_8
-	{
-		PTBD = 0x00;
-		EN = 1;
-		RS = 0;
-		contador_init = 4; //32us
-	}
-	else if(state == 18){
-		EN = 0;
-		RS = 0;
-		contador_init = 4; //32us
-	}
-	else if(state == 19) //function_set_8
-	{
-		PTBD = 0x10;
-		EN = 1;
-		RS = 0;
-		contador_init = 4; //32us
-	}
-	else if(state == 20){
-		EN = 0;
-		RS = 0;
-		MTIMMOD = 250; // 1ms
-		contador_init = 5; //5ms
-		// tercer dato enviado en 4 bits
-	}
-	else if(state == 21){
-		PTBD = 0x00;
-		EN = 1;
-		RS = 0;
-		MTIMMOD = 2; // 1ms
-		contador_init = 4; //32us
-	}
-	else if(state == 22){
-		EN = 0;
-		RS = 0;
-		contador_init = 4; //32us
-	}
-	else if(state == 23){
-		PTBD = 0x60;
-		EN = 1;
-		RS = 0;
-		contador_init = 4; //32us
-	}
-	else if(state == 24){
-		EN = 0;
-		RS = 0;
-		contador_init = 16; //128us		
-		// cuarto dato enviado en 4 bits
-	}
-	else if(state == 25){
-		initialization_ends = 1;
+		RS = 1;
+		MTIMMOD = 4;
+		break;
+
+	case 9:
+		state2--;
+		break;
+
+	/*case 10:
+		state2=6;
+		break;*/
+
+	default:
+		break;
 	}
 }
 
 void main(void) {
-	MTIMSC = 0x40;
-	MTIMCLK = 0x08; //PS = 16
-	MTIMMOD = 255; // 1ms
+	char enviar = 1;
 	
+	MTIMSC = 0x40; //Habilita interrupcion
+	MTIMCLK = 0x08; //PS = 256
+	MTIMMOD = 255; // 16.32 ms
+
 	PTBDD=0xFF;
 	PTBD = 0x00;
 
@@ -391,24 +287,27 @@ void main(void) {
 	PTAD = 0x00;
 
 	SOPT1 = 0x52;
-	contador_init = 122;
 
 	EnableInterrupts;
 	for(;;) {
-		
-		
-		if(interruption_flag == 0x01){
-			interruption_flag = 0x00;
-			init_LCD();
-			state++;	
-		}
-/*		if(interruption_flag == 1){
+
+		if(interruption_flag == 1){
 			interruption_flag = 0;
-			if(initialization_ends == 0){
+			if(initialization_ends == 1){
+				send_data();
+				state2++;
+			}
+			else{
 				init_LCD();
+				state++;
 			}
 		}
-		
-		__RESET_WATCHDOG();	 feeds the dog */
+		/*if(initialization_ends == 1){
+			if(enviar == 1){
+				PTBD = 0xC0;
+				enviar = 0;
+			}
+		}*/
+		//__RESET_WATCHDOG();	 feeds the dog */
 	} 
 }
