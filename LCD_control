@@ -7,13 +7,14 @@ char interruption_flag = 0;
 char state = 0;
 char state2 = 0;
 char initialization_ends = 0;
-char up_bits_letter[] = {0xC0,0x50}; //C,W
+char up_bits_letter[] = {0x40,0x50}; //C,W
 char low_bits_letter[] = {0x30,0x70};//C,W
 char i = 0;
 char j = 0;
+char send_data_off = 0;
 
 void init_LCD(void);
-void send_commands(void);
+void send_data(void);
 
 interrupt 12 void RTI_MTIM(void){
 	(void)MTIMSC;
@@ -209,64 +210,45 @@ void send_data(void){
 	switch(state2){
 	
 	case 1:
-		PTBD = up_bits_letter[i++]; //Upper bits
-		EN = 1;
-		RS = 0;
-		MTIMMOD = 1;
+		if(i == 2){
+			send_data_off = 1;
+			state2 = 4;
+		}
+		else{
+			PTBD = up_bits_letter[i++]; //Upper bits
+			EN = 1;
+			RS = 1;
+			MTIMMOD = 1;
+		}
 		break;
 		
 	case 2:
 		EN = 0;
-		RS = 0;
+		RS = 1;
 		MTIMMOD = 4;
 		break;
 		
 	case 3:
 		PTBD = low_bits_letter[j++]; //Lower bits
 		EN = 1;
-		RS = 0;
+		RS = 1;
 		MTIMMOD = 1;
 		break;
 		
 	case 4:
 		EN = 0;
-		RS = 0;
+		RS = 1;
 		MTIMMOD = 4;
 		break;
-	
+
 	case 5:
-		PTBD = 0x40; //Upper bits
-		EN = 1;
-		RS = 1;
-		MTIMMOD = 1;
+		if(send_data_off == 0){
+			state2 = 0;
+		}
+		else{
+			state2--;
+		}
 		break;
-
-	case 6:
-		EN = 0;
-		RS = 1;
-		MTIMMOD = 4; 
-		break;
-
-	case 7:
-		PTBD = 0x10; //Lower bits
-		EN = 1;
-		RS = 1;
-		MTIMMOD = 1;
-		break;
-
-	case 8:
-		EN = 0;
-		RS = 1;
-		MTIMMOD = 4;
-		break;
-
-	case 9:
-		state2--;
-		break;
-
-	/*case 10:
-		state2=6;
-		break;*/
 
 	default:
 		break;
