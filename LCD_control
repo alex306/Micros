@@ -9,12 +9,17 @@ char state2 = 0;
 char initialization_ends = 0;
 char up_bits_letter[] = {0x40,0x50}; //C,W
 char low_bits_letter[] = {0x30,0x70};//C,W
+char letters[] = {'C','C','W',' ','-',' ','2','2','.','3',' '};
 char i = 0;
 char j = 0;
 char send_data_off = 0;
+char low;
+char high;
 
 void init_LCD(void);
 void send_data(void);
+void char_lowN(char letra);
+void char_highN(char letra);
 
 interrupt 12 void RTI_MTIM(void){
 	(void)MTIMSC;
@@ -210,12 +215,13 @@ void send_data(void){
 	switch(state2){
 	
 	case 1:
-		if(i == 2){
+		if(letters[i] == 0){
 			send_data_off = 1;
 			state2 = 4;
 		}
 		else{
-			PTBD = up_bits_letter[i++]; //Upper bits
+			char_highN(letters[i++]);
+			PTBD = high; //Upper bits
 			EN = 1;
 			RS = 1;
 			MTIMMOD = 1;
@@ -229,7 +235,8 @@ void send_data(void){
 		break;
 		
 	case 3:
-		PTBD = low_bits_letter[j++]; //Lower bits
+		char_lowN(letters[j++]);
+		PTBD = low;//Lower bits
 		EN = 1;
 		RS = 1;
 		MTIMMOD = 1;
@@ -253,6 +260,18 @@ void send_data(void){
 	default:
 		break;
 	}
+}
+
+void char_lowN(char letra){
+	unsigned char addr = letra;
+	low = (addr & 0x0F) << 4;
+	//return low;
+}
+
+void char_highN(char letra){
+	unsigned char addr = letra;
+	high = ((addr >> 4) & 0x0F) << 4;
+	//return high;
 }
 
 void main(void) {
@@ -293,3 +312,4 @@ void main(void) {
 		//__RESET_WATCHDOG();	 feeds the dog */
 	} 
 }
+
