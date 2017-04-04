@@ -47,14 +47,27 @@ char state2 = 0;
 char initialization_ends = 0;
 //char letters[] = {'C','C','W',' ','-',' ','2','2','.','3',0xDF};
 char letters2[] = {"TOROMAX GIIIII"};
-char dir_reloj[] = {'C','C','W',' ','-',' ','2','2','.','3',0xDF};
-char dir_inversa_reloj[] = {'C','W',' ','-',' ','2','2','.','3',0xDF};
-char i = 0;
-char j = 0;
+char dir_inversa_reloj[] = {'C','C','W',' ','-',' ','2','2','.','3',0xDF};
+char dir_reloj[] = {'C','W',' ','-',' ','2','2','.','3',0xDF};
+char i2 = 0;
+char j2 = 0;
+char i3 = 0;
+char j3 = 0;
+char i4 = 0;
+char j4 = 0;
 char send_data_off = 0;
 char low;
 char high;
 char enviar_LCD = 1;
+char beginning_data = 0;
+char state3 = 0;
+char regresar_pos = 0;
+char state4 = 0;
+char state5 = 0;
+char send_data_off_2 = 0;
+char send_data_off_3 = 0;
+char send_data_off_4 = 0;
+char send_data_off_5 = 0;
 
 void seleccionar_comando(void);
 void check_buffer(void);
@@ -77,6 +90,7 @@ interrupt 15 void UART_rx(void) //receive
 		SCID = '\n';
 		checar_arreglo = 1;
 		enviar_LCD = 0;
+		regresar_pos = 0;
 		//i=0;
 	}
 	else{
@@ -131,7 +145,7 @@ interrupt 7 void RTI_TPM(void){
 		tiempo_timer = 0;
 	}
 	encender_LED = 1;
-	correr_secuencia = 1; //Conexion entre el main y la interrupcion
+	correr_secuencia = 1; //Conexion entre el main y la interrupcion  
 }
 
 /*************       Codigo para LCD        *************/
@@ -325,7 +339,7 @@ void init_LCD(void){
 	}	
 }
 
-void send_data(void){
+/*void send_data2(void){
 	
 	switch(state2){
 	
@@ -408,6 +422,61 @@ void send_data(void){
 	default:
 		break;
 	}
+}*/
+
+void send_data(void){
+	
+	switch(state2){
+	
+	case 1:
+		if(dir_reloj[i2] == 0){
+			send_data_off = 1;
+			beginning_data = 1;
+			state2 = 4;
+			i2=0;
+			j2=0;
+		}
+		else{
+			char_highN(dir_reloj[i2++]);
+			PTBD = high; //Upper bits
+			EN = 1;
+			RS = 1;
+			MTIMMOD = 1;
+		}
+		break;
+		
+	case 2:
+		EN = 0;
+		RS = 1;
+		MTIMMOD = 4;
+		break;
+		
+	case 3:
+		char_lowN(dir_reloj[j2++]);
+		PTBD = low;//Lower bits
+		EN = 1;
+		RS = 1;
+		MTIMMOD = 1;
+		break;
+		
+	case 4:
+		EN = 0;
+		RS = 1;
+		MTIMMOD = 4;
+		break;
+
+	case 5:
+		if(send_data_off == 0){
+			state2 = 0;
+		}
+		else{
+			state2--;
+		}
+		break;
+
+	default:
+		break;
+	}
 }
 
 void char_lowN(char letra){
@@ -418,6 +487,154 @@ void char_lowN(char letra){
 void char_highN(char letra){
 	unsigned char addr = letra;
 	high = ((addr >> 4) & 0x0F) << 4;
+}
+
+void send_command(void){
+	
+	switch(state3){
+	
+	case 1:
+		PTBD = 0x80; //Upper bits
+		EN = 1;
+		RS = 0;
+		MTIMMOD = 1;
+		break;
+		
+	case 2:
+		EN = 0;
+		RS = 0;
+		MTIMMOD = 4;
+		break;
+		
+	case 3:
+		PTBD = 0x00; //Low bits
+		EN = 1;
+		RS = 0;
+		MTIMMOD = 1;
+		break;
+		
+	case 4:
+		EN = 0;
+		RS = 0;
+		MTIMMOD = 4;
+		break;
+		
+	case 5:
+		regresar_pos = 1;
+		state3--;
+		break;
+	}
+}
+
+
+void send_dir(){
+	
+	switch(state4){
+		
+	case 1:
+		if(dir_reloj[i3] == 0){
+			send_data_off_2 = 1;
+			enviar_LCD = 1;
+			state4 = 5;
+			i3=0;
+			j3=0;
+		}
+		else{
+			char_highN(dir_reloj[i3++]);
+			PTBD = high; //Upper bits
+			EN = 1;
+			RS = 1;
+			MTIMMOD = 1;
+		}
+		break;
+
+	case 2:
+		EN = 0;
+		RS = 1;
+		MTIMMOD = 4;
+		break;
+
+	case 3:
+		char_lowN(dir_reloj[j3++]);
+		PTBD = low;//Lower bits
+		EN = 1;
+		RS = 1;
+		MTIMMOD = 1;
+		break;
+
+	case 4:
+		EN = 0;
+		RS = 1;
+		MTIMMOD = 4;
+		break;
+
+	case 5:
+		if(send_data_off_2 == 0){
+			state4 = 0;
+		}
+		else{
+			state4--;
+		}
+		break;
+
+	default:
+		break;
+	}
+}
+
+void send_inverse_dir(){
+	
+	switch(state5){
+
+	case 1:
+		if(dir_inversa_reloj[i4] == 0){
+			send_data_off_3 = 1;
+			enviar_LCD = 1;
+			state5 = 5;
+			i4=0;
+			j4=0;
+		}
+		else{
+			char_highN(dir_inversa_reloj[i4++]);
+			PTBD = high; //Upper bits
+			EN = 1;
+			RS = 1;
+			MTIMMOD = 1;
+		}
+		break;
+
+	case 2:
+		EN = 0;
+		RS = 1;
+		MTIMMOD = 4;
+		break;
+
+	case 3:
+		char_lowN(dir_inversa_reloj[j4++]);
+		PTBD = low;//Lower bits
+		EN = 1;
+		RS = 1;
+		MTIMMOD = 1;
+		break;
+
+	case 4:
+		EN = 0;
+		RS = 1;
+		MTIMMOD = 4;
+		break;
+
+	case 5:
+		if(send_data_off_3 == 0){
+			state5 = 0;
+		}
+		else{
+			state5--;
+		}
+		break;
+
+	default:
+		break;
+	}
 }
 /********************************************************************************/
 /********************************************************************************/
@@ -829,7 +1046,7 @@ void main(void) {
 	choose_command = 0;
 	//count_comando = 0;
 	enable_transmission = 0;
-	on_off = 1;
+	on_off = 0;
 	mover_en_grados = 0;
 	value = 0;
 	range = 0;
@@ -850,8 +1067,28 @@ void main(void) {
 		if(interruption_flag == 1){
 			interruption_flag = 0;
 			if(initialization_ends == 1){
-				send_data();
-				state2++;
+				if(beginning_data == 0){
+					send_data();
+					state2++;
+				}
+				if(enviar_LCD == 0){
+					if(regresar_pos == 0){
+						send_command(); //regresa a la linea 1, posicion 1
+						state3++;
+						state4=0;
+						state5=0;
+					}
+					else{
+						if(cambiar_direccion == 0){
+							send_dir();
+							state4++;
+						}
+						else if(cambiar_direccion == 1){
+							send_inverse_dir();
+							state5++;
+						}
+					}
+				}
 			}
 			else{
 				init_LCD();
@@ -863,7 +1100,7 @@ void main(void) {
 			encender_LED = 0;
 			led();
 		}
-		if(checar_temperatura == 1){
+		/*if(checar_temperatura == 1){
 			temperatura_ADC = operacionTemp();
 			checar_temperatura = 0;
 			num_to_character();
@@ -874,7 +1111,7 @@ void main(void) {
 				imprimir_comando_tempover = 1;
 				SCIC2_TIE = 1;
 			}
-		}
+		}*/
 		if(checar_arreglo == 1){
 			checar_arreglo = 0;
 			check_buffer();
