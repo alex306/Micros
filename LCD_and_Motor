@@ -48,9 +48,10 @@ char initialization_ends = 0;
 //char letters[] = {'C','C','W',' ','-',' ','2','2','.','3',0xDF};
 char letters2[] = {'C','C','W',' ','-',' ','2','2','.','3',0xDF};
 //char dir_inversa_reloj[] = {'C','C','W',' ','-',' ','2','2','.','3',0xDF};
-char dir_inversa_reloj[] = {"CCW - 22.3"};
+char dir_inversa_reloj[] = {"CCW - 22.3*"};
 //char dir_reloj[] = {'C','W',' ','-',' ','2','2','.','3',0xDF};
-char dir_reloj[] = {"CW - 22.3"};
+char dir_reloj[] = {"CW - 22.3*"};
+char rps_arr[] = {"1.3 RPS"};
 char i2 = 0;
 char j2 = 0;
 char i3 = 0;
@@ -70,6 +71,12 @@ char send_data_off_2 = 0;
 char send_data_off_3 = 0;
 char send_data_off_4 = 0;
 char send_data_off_5 = 0;
+char enviar_RPS = 0;
+char i5 = 0;
+char j5 = 0;
+char state6 = 0;
+char state7 = 0;
+char pos_linea_dos = 0;
 
 void seleccionar_comando(void);
 void check_buffer(void);
@@ -86,6 +93,7 @@ void char_highN(char letra);
 void send_command(void);
 void send_dir(void);
 void send_inverse_dir(void);
+void send_RPS(void);
 
 interrupt 15 void UART_rx(void) //receive
 {
@@ -451,26 +459,27 @@ void send_dir(void){
 	switch(state4){
 		
 	case 1:
-		if(dir_reloj[i3] != 0){
+		if(dir_reloj[i3] == 0){
+			send_data_off_2 = 1;
+			enviar_LCD = 0;
+			state4 = 4;
+			enviar_LCD = 0;
+			i3=0;
+			j3=0;
+		}
+		else{
 			char_highN(dir_reloj[i3++]);
 			PTBD = high; //Upper bits
 			EN = 1;
 			RS = 1;
 			MTIMMOD = 1;
 		}
-		else{
-			send_data_off_2 = 1;
-			enviar_LCD = 0;
-			state4 = 4;
-			i3=0;
-			j3=0;
-		}
 		break;
 
 	case 2:
 		EN = 0;
 		RS = 1;
-		MTIMMOD = 1;//4
+		MTIMMOD = 2;//4
 		break;
 
 	case 3:
@@ -478,13 +487,13 @@ void send_dir(void){
 		PTBD = low;//Lower bits
 		EN = 1;
 		RS = 1;
-		MTIMMOD = 1;
+		MTIMMOD = 2;
 		break;
 
 	case 4:
 		EN = 0;
 		RS = 1;
-		MTIMMOD = 1;//4
+		MTIMMOD = 4;//4
 		break;
 
 	case 5:
@@ -549,6 +558,96 @@ void send_inverse_dir(void){
 		break;
 	}
 }
+
+void send_linea(void){
+	switch(state7){
+
+	case 1:
+		PTBD = 0xC0; 
+		EN = 1;
+		RS = 0;
+		MTIMMOD = 1;
+		break;
+
+	case 2:
+		EN = 0;
+		RS = 0;
+		MTIMMOD = 1;//4
+		break;
+
+	case 3:
+		PTBD = 0x00;
+		EN = 1;
+		RS = 0;
+		MTIMMOD = 1;
+		break;
+
+	case 4:
+		EN = 0;
+		RS = 0;
+		MTIMMOD = 8;//4
+		break;
+
+	case 5:
+		pos_linea_dos = 0;
+		enviar_RPS = 1;
+		break;
+	}
+}
+
+void send_RPS(void){
+	
+	switch(state6){
+
+	case 1:
+		if(rps_arr[i5] == 0){
+			send_data_off_4 = 1;
+			state6 = 4;
+			enviar_RPS = 0;
+			i5=0;
+			j5=0;
+		}
+		else{
+			char_highN(rps_arr[i5++]);
+			PTBD = high; //Upper bits
+			EN = 1;
+			RS = 1;
+			MTIMMOD = 1;
+		}
+		break;
+
+	case 2:
+		EN = 0;
+		RS = 1;
+		MTIMMOD = 2;//4
+		break;
+
+	case 3:
+		char_lowN(rps_arr[j5++]);
+		PTBD = low;//Lower bits
+		EN = 1;
+		RS = 1;
+		MTIMMOD = 2;
+		break;
+
+	case 4:
+		EN = 0;
+		RS = 1;
+		MTIMMOD = 4;//4
+		break;
+
+	case 5:
+		if(send_data_off_4 == 0){
+			state6 = 0;
+		}
+		break;
+
+	default:
+		break;
+	}
+}
+
+
 /********************************************************************************/
 /********************************************************************************/
 /********************************************************************************/
@@ -651,6 +750,8 @@ void check_buffer(void)
 					if(coincidencia == 5){
 						choose_command = 0;
 						imprimir_comando_done = 1;
+						state6 = 0;
+						pos_linea_dos = 1;  //****************************************************************************************
 						coincidencia = 0;
 						timer = 1;
 						break;
@@ -672,7 +773,7 @@ void check_buffer(void)
 				}
 			}
 		}
-		else if(temp[0] == 'D'){// DIRC
+		else if(temp[0] == 'D'){// DIRC       ***************************************************************
 			if(temp[j] == comando_DIR[j]){
 				coincidencia++;
 				if(coincidencia == 3){
@@ -683,7 +784,6 @@ void check_buffer(void)
 						coincidencia = 0;
 						i=0;
 						state3 = 0;
-						//send_command();
 						state4 = 0;
 						state5 = 0;
 						regresar_pos = 1;
@@ -696,7 +796,6 @@ void check_buffer(void)
 						coincidencia = 0;
 						i=0;
 						state3 = 0;
-						//send_command();
 						state4 = 0;
 						state5 = 0;
 						regresar_pos = 1;
@@ -998,16 +1097,26 @@ void main(void) {
 					send_command();
 					state3++;
 					state5=0;
+					state4=0;
 				}
 				if(enviar_LCD == 1){
 					if(cambiar_direccion == 1){
 						send_inverse_dir();
 						state5++;
 					}
-					/*if(cambiar_direccion == 0){
+					if(cambiar_direccion == 0){
 						send_dir();
 						state4++;
-					}*/
+					}
+				}
+				if(pos_linea_dos == 1){
+					send_linea();
+					state7++;
+					state6=0;
+				}
+				if(enviar_RPS == 1){
+					send_RPS();
+					state6++;
 				}
 			}
 			else{
