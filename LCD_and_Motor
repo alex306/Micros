@@ -47,8 +47,10 @@ char state2 = 0;
 char initialization_ends = 0;
 //char letters[] = {'C','C','W',' ','-',' ','2','2','.','3',0xDF};
 char letters2[] = {'C','C','W',' ','-',' ','2','2','.','3',0xDF};
-char dir_inversa_reloj[] = {'C','C','W',' ','-',' ','2','2','.','3',0xDF};
-char dir_reloj[] = {'C','W',' ','-',' ','2','2','.','3',0xDF};
+//char dir_inversa_reloj[] = {'C','C','W',' ','-',' ','2','2','.','3',0xDF};
+char dir_inversa_reloj[] = {"CCW - 22.3"};
+//char dir_reloj[] = {'C','W',' ','-',' ','2','2','.','3',0xDF};
+char dir_reloj[] = {"CW - 22.3"};
 char i2 = 0;
 char j2 = 0;
 char i3 = 0;
@@ -58,7 +60,7 @@ char j4 = 0;
 char send_data_off = 0;
 char low;
 char high;
-unsigned char enviar_LCD = 0; 
+char enviar_LCD = 0; 
 char beginning_data = 0;
 char state3 = 0;
 char regresar_pos = 0;
@@ -347,16 +349,16 @@ void send_data(void){
 	switch(state2){
 	
 	case 1:
-		if(dir_reloj[i2] == 0){
-			send_data_off = 1;
-			state2 = 4;
-		}
-		else{
+		if(dir_reloj[i2] != 0){
 			char_highN(dir_reloj[i2++]);
 			PTBD = high; //Upper bits
 			EN = 1;
 			RS = 1;
 			MTIMMOD = 1;
+		}
+		else{
+			send_data_off = 1;
+			state2 = 4;
 		}
 		break;
 		
@@ -432,13 +434,13 @@ void send_command(void){
 	case 4:
 		EN = 0;
 		RS = 0;
-		MTIMMOD = 1;//4
+		MTIMMOD = 8;//4
 		break;
 		
 	case 5:
 		regresar_pos = 0;
 		enviar_LCD = 1;
-		state3--;
+		//state3--;
 		break;
 	}
 }
@@ -449,19 +451,19 @@ void send_dir(void){
 	switch(state4){
 		
 	case 1:
-		if(i3 == 10){
-			send_data_off_2 = 1;
-			enviar_LCD = 0;
-			state4 = 4;
-			i3=0;
-			j3=0;
-		}
-		else{
+		if(dir_reloj[i3] != 0){
 			char_highN(dir_reloj[i3++]);
 			PTBD = high; //Upper bits
 			EN = 1;
 			RS = 1;
 			MTIMMOD = 1;
+		}
+		else{
+			send_data_off_2 = 1;
+			enviar_LCD = 0;
+			state4 = 4;
+			i3=0;
+			j3=0;
 		}
 		break;
 
@@ -489,9 +491,6 @@ void send_dir(void){
 		if(send_data_off_2 == 0){
 			state4 = 0;
 		}
-		else{
-			state4--;
-		}
 		break;
 
 	default:
@@ -506,10 +505,10 @@ void send_inverse_dir(void){
 	case 1:
 		if(dir_inversa_reloj[i4] == 0){
 			send_data_off_3 = 1;
-			enviar_LCD = 0;
 			state5 = 4;
-			//i4=0;
-			//j4=0;
+			enviar_LCD = 0;
+			i4=0;
+			j4=0;
 		}
 		else{
 			char_highN(dir_inversa_reloj[i4++]);
@@ -523,7 +522,7 @@ void send_inverse_dir(void){
 	case 2:
 		EN = 0;
 		RS = 1;
-		MTIMMOD = 1;//4
+		MTIMMOD = 2;//4
 		break;
 
 	case 3:
@@ -531,23 +530,18 @@ void send_inverse_dir(void){
 		PTBD = low;//Lower bits
 		EN = 1;
 		RS = 1;
-		MTIMMOD = 1;
+		MTIMMOD = 2;
 		break;
 
 	case 4:
 		EN = 0;
 		RS = 1;
-		MTIMMOD = 1;//4
+		MTIMMOD = 4;//4
 		break;
 
 	case 5:
 		if(send_data_off_3 == 0){
 			state5 = 0;
-		}
-		else{
-			i4=0;
-			j4=0;
-			state5--;
 		}
 		break;
 
@@ -1003,16 +997,16 @@ void main(void) {
 				if(regresar_pos == 1){
 					send_command();
 					state3++;
-					//state4=0;
+					state5=0;
 				}
 				if(enviar_LCD == 1){
-					if(cambiar_direccion == 0){
-						send_dir();
-						state4++;
-					}
-					/*if(cambiar_direccion == 1){
+					if(cambiar_direccion == 1){
 						send_inverse_dir();
 						state5++;
+					}
+					/*if(cambiar_direccion == 0){
+						send_dir();
+						state4++;
 					}*/
 				}
 			}
