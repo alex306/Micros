@@ -11,8 +11,8 @@ unsigned char comando_TEMPLIMIT[] = {"TEMPLIMIT:"};
 unsigned char command_ex[] = {"DONE\n\r"};
 unsigned char command_unrecognized[] = {"Comando no reconocido"};
 //unsigned char command_tempeture[] = {"Temperatura es    .  \n\r"}; //15 16 17 19
-//unsigned char command_tempeture[] = {"Temperatura es \n\r"};
-//unsigned char mensaje_temp_limit[] = {"Overtemperature detected\n\r"};
+unsigned char command_tempeture[] = {"Temperatura es \n\r"};
+unsigned char mensaje_temp_limit[] = {"Overtemperature detected\n\r"};
 unsigned char command_turnoff[] = {"Apagar motor"};
 unsigned char i, c, caracter, on_off, size, choose_command, imprimir_comando, imprimir_comando_tempover;
 unsigned char count_comando = 0;
@@ -50,10 +50,10 @@ char initialization_ends = 0;
 //char letters[] = {'C','C','W',' ','-',' ','2','2','.','3',0xDF};
 char letters2[] = {'C','C','W',' ','-',' ','2','2','.','3',0xDF};
 //char dir_inversa_reloj[] = {'C','C','W',' ','-',' ','2','2','.','3',0xDF};
-char dir_inversa_reloj[] = {"CCW - 22.3*"};
+char dir_inversa_reloj[] = {"CCW - 999.9*"};
 //char dir_reloj[] = {'C','W',' ','-',' ','2','2','.','3',0xDF};
-char dir_reloj[] = {"CW - 22.3*"};
-char rps_arr[] = {"1.3 RPS"};
+char dir_reloj[] = {"CW - 999.9*"};
+char rps_arr[] = {"99.9 RPS"};
 char i2 = 0;
 char j2 = 0;
 char i3 = 0;
@@ -82,12 +82,13 @@ char pos_linea_dos = 0;
 char beginning_data2 = 0;
 char pos_linea_dos_2 = 1;
 char enviar_RPS_2 = 0;
+unsigned int pot = 0;
 
 void seleccionar_comando(void);
 void check_buffer(void);
 char operacion();
 unsigned int operacion_grados(unsigned int grados_parametro);
-int operacionTemp();
+unsigned int operacionTemp(void);
 void led(void);
 void num_to_character(void);
 /*     LCD      */
@@ -155,7 +156,7 @@ interrupt 7 void RTI_TPM(void){
 	(void)TPMSC;
 	TPMSC_TOF = 0; //Timer Overflow Flag
 	tiempo_timer++;
-	tiempo_LED++;
+	//tiempo_LED++;
 	if(tiempo_timer == 5000){
 		checar_temperatura = 1;
 		tiempo_timer = 0;
@@ -423,7 +424,7 @@ void send_command(void){
 	switch(state3){
 	
 	case 1:
-		PTBD = 0x00; //0x80
+		PTBD = 0x80; //0x80
 		EN = 1;
 		RS = 0;
 		MTIMMOD = 1;
@@ -436,7 +437,7 @@ void send_command(void){
 		break;
 		
 	case 3:
-		PTBD = 0x10; //0x10
+		PTBD = 0x00; //0x10
 		EN = 1;
 		RS = 0;
 		MTIMMOD = 1;
@@ -595,6 +596,7 @@ void send_linea(void){
 		enviar_RPS = 1;
 		enviar_RPS_2 = 1;
 		pos_linea_dos_2 = 0;
+		pos_linea_dos = 0;
 		break;
 	}
 }
@@ -703,14 +705,17 @@ void check_buffer(void)
 			}
 			else{
 				if((temp[4] >= '0') && (temp[4] <= '9')){
+					rps_arr[0] = temp[4];
 					centenas2 = temp[4] - 0x30;
 					centenas2*=100;
 					coincidencia++;
 					if((temp[5] >= '0') && (temp[5] <= '9')){
+						rps_arr[1] = temp[5];
 						decenas2 = temp[5] - 0x30;
 						decenas2*=10;
 						coincidencia++;
 						if((temp[7] >= '0') && (temp[7] <= '9')){
+							rps_arr[3] = temp[7];
 							unidades2 = temp[7] - 0x30;
 							coincidencia++;
 						}
@@ -987,14 +992,14 @@ void check_buffer(void)
 
 /*************       Codigo para motor        *************/
 
-char operacion(){ // Metodo para formatear el valor del ADC segun los pasos para que el motor de una revolucion completa
+/*char operacion(){ // Metodo para formatear el valor del ADC segun los pasos para que el motor de una revolucion completa
 	unsigned char op;
 	unsigned int pot;
 	pot = ADCRL; //Registro de ADC
 	op=(char)((52000 - 192*((pot)))/1000);// ecuacion para el ADC, con base en valores de 1000, valor de nuestra pendiente -.192.
 
 	return op;
-}
+}*/
 
 /*************          Codigo SERIAL         *************/
 unsigned int operacion_grados(unsigned int grados_parametro){
@@ -1003,11 +1008,29 @@ unsigned int operacion_grados(unsigned int grados_parametro){
 	return div;
 }
 
-int operacionTemp(){ // Metodo para formatear el valor del ADC segun los pasos para que el motor de una revolucion completa
-	unsigned int op, pot;
-	pot = ADCRL; //Registro de ADC
-	op=(int)pot*39;// ecuacion para el ADC, con base en valores de 1000, valor de nuestra pendiente -.192.
-	return op;
+unsigned int operacionTemp(void){ // Metodo para formatear el valor del ADC segun los pasos para que el motor de una revolucion completa
+	pot+=25; 
+	return pot;
+}
+
+void temperatura_LCD(void){
+	unsigned int temperatura;
+	temperatura = operacionTemp();
+	if(temperatura < 100){
+		dir_inversa_reloj[8] = dir_reloj[7] = ((char) temperatura % 10) + 0x30; //unidades
+		temperatura /=10;
+		dir_inversa_reloj[7] = dir_reloj[6] = ((char) temperatura % 10) + 0x30; //decenas
+		dir_inversa_reloj[6] = dir_reloj[5] = '0'; //centenas
+		dir_inversa_reloj[10] = dir_reloj[9] = '0'; //decimales
+	}
+	else{
+		dir_inversa_reloj[8] = dir_reloj[7] = ((char) temperatura % 10) + 0x30; //unidades
+		temperatura /=10;
+		dir_inversa_reloj[7] = dir_reloj[6] = ((char) temperatura % 10) + 0x30; //decenas
+		temperatura /=10;
+		dir_inversa_reloj[6] = dir_reloj[5] = ((char) temperatura % 10) + 0x30; //centenas
+		dir_inversa_reloj[10] = dir_reloj[9] = '0';
+	}
 }
 
 void led(void){
@@ -1110,6 +1133,11 @@ void main(void) {
 						state6++;
 					}
 				}*/
+				if(checar_temperatura == 1){
+					checar_temperatura = 0;
+					temperatura_LCD();
+					regresar_pos = 1;
+				}
 				if(regresar_pos == 1){
 					send_command();
 					state3++;
@@ -1142,52 +1170,18 @@ void main(void) {
 			}
 		}
 		
-		
-		
-		/*if(interruption_flag == 1){
-			interruption_flag = 0;
-			if(initialization_ends == 1){
-				//if(beginning_data == 0){
-					send_data();
-					state2++;
-				//}
-				else if(enviar_LCD == 0){
-					if(regresar_pos == 0){
-						send_command(); //regresa a la linea 1, posicion 1
-						state3++;
-						state4=0;
-						state5=0;
-					}
-					else{
-						if(cambiar_direccion == 0){
-							send_dir();
-							state4++;
-							state3=0;
-						}
-						else if(cambiar_direccion == 1){
-							send_inverse_dir();
-							state5++;
-							state3=0;
-						}
-					}
-				}
-			}
-			else{
-				init_LCD();
-				state++;
-			}
-		}*/
 		/************************************/
+		/****************    CODIGO MOTOR     ********************/
 		/*if(encender_LED == 1){
 			encender_LED = 0;
 			led();
 		}*/
 		/*if(checar_temperatura == 1){
-			temperatura_ADC = operacionTemp();
+			//temperatura_ADC = operacionTemp();
 			checar_temperatura = 0;
-			num_to_character();
-			imprimir_temperatura = 1;
-			SCIC2_TIE = 1;
+			//num_to_character();
+			//imprimir_temperatura = 1;
+			//SCIC2_TIE = 1;
 			if(temperatura_limite <= temperatura_ADC){
 				on_off = 0;
 				imprimir_comando_tempover = 1;
