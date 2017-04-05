@@ -14,7 +14,8 @@ unsigned char command_unrecognized[] = {"Comando no reconocido"};
 unsigned char command_tempeture[] = {"Temperatura es \n\r"};
 unsigned char mensaje_temp_limit[] = {"Overtemperature detected\n\r"};
 unsigned char command_turnoff[] = {"Apagar motor"};
-unsigned char i, c, caracter, on_off, size, choose_command, imprimir_comando, imprimir_comando_tempover;
+unsigned char i, c, caracter, on_off, size, choose_command, imprimir_comando;
+unsigned char imprimir_comando_tempover = 0;
 unsigned char count_comando = 0;
 unsigned char count_comando2 = 0;
 unsigned char data;
@@ -83,6 +84,8 @@ char beginning_data2 = 0;
 char pos_linea_dos_2 = 1;
 char enviar_RPS_2 = 0;
 unsigned int pot = 0;
+unsigned int temp_limit_LCD = 250;
+unsigned char comando_temp_limit = 0;
 
 void seleccionar_comando(void);
 void check_buffer(void);
@@ -128,6 +131,16 @@ interrupt 16 void UART_tx(void){ //transmit
 			SCIC2_TIE = 0;
 		}
 	}
+	if(imprimir_comando_tempover == 1){
+		if(mensaje_temp_limit[count_comando2] != 0){
+			SCID = mensaje_temp_limit[count_comando2++];
+		}
+		else{
+			count_comando2=0;
+			imprimir_comando_tempover = 0;
+			SCIC2_TIE = 0;
+		}
+	}
 	/*if((imprimir_temperatura == 1) && (imprimir_comando_done == 0)){
 		if(count_comando < 24){
 			SCID = command_tempeture[count_comando++];
@@ -140,16 +153,6 @@ interrupt 16 void UART_tx(void){ //transmit
 			SCIC2_TIE = 0;
 		}
 	}*///28
-	/*if(imprimir_comando_tempover == 1){
-		if(count_comando2 < 28){
-			SCID = mensaje_temp_limit[count_comando2++];
-		}
-		else{
-			count_comando2=0;
-			imprimir_comando_tempover = 0;
-			SCIC2_TIE = 0;
-		}
-	}*/
 }
 
 interrupt 7 void RTI_TPM(void){
@@ -934,15 +937,15 @@ void check_buffer(void)
 			else{
 				if((temp[10] >= '0') && (temp[10] <= '9')){
 					millares = temp[10] - 0x30;
-					millares*=1000;
+					millares*=100;
 					coincidencia++;
 					if((temp[11] >= '0') && (temp[11] <= '9')){
 						centenas3 = temp[11] - 0x30;
-						centenas3*=100;
+						centenas3*=10;
 						coincidencia++;
 						if((temp[12] >= '0') && (temp[12] <= '9')){
 							decenas3 = temp[12] - 0x30;
-							decenas3*=10;
+							//decenas3*=10;
 							coincidencia++;
 							if((temp[14] >= '0') && (temp[14] <= '9')){
 								unidades3 = temp[14] - 0x30;
@@ -973,10 +976,12 @@ void check_buffer(void)
 					//command_tempeture[16] = temp[11];
 					//command_tempeture[17] = temp[12];
 					//command_tempeture[19] = temp[14];
-					temperatura_limite = unidades3 + decenas3 + centenas3 + millares;
+					//temperatura_limite = unidades3 + decenas3 + centenas3 + millares;
+					temp_limit_LCD = decenas3 + centenas3 + millares;
 					coincidencia = 0;
 					//i=0;
 					imprimir_comando_done = 1;
+					SCIC2_TIE = 1;
 				}
 			}
 		}
@@ -1016,20 +1021,32 @@ unsigned int operacionTemp(void){ // Metodo para formatear el valor del ADC segu
 void temperatura_LCD(void){
 	unsigned int temperatura;
 	temperatura = operacionTemp();
-	if(temperatura < 100){
-		dir_inversa_reloj[8] = dir_reloj[7] = ((char) temperatura % 10) + 0x30; //unidades
-		temperatura /=10;
-		dir_inversa_reloj[7] = dir_reloj[6] = ((char) temperatura % 10) + 0x30; //decenas
+	if(temp_limit_LCD <= temperatura){
+		on_off = 0;
+		dir_inversa_reloj[8] = dir_reloj[7] = '0'; //unidades
+		dir_inversa_reloj[7] = dir_reloj[6] = '0'; //decenas
 		dir_inversa_reloj[6] = dir_reloj[5] = '0'; //centenas
 		dir_inversa_reloj[10] = dir_reloj[9] = '0'; //decimales
+		imprimir_comando_tempover = 1;
+		SCIC2_TIE = 1;
+		pot = 0;
 	}
 	else{
-		dir_inversa_reloj[8] = dir_reloj[7] = ((char) temperatura % 10) + 0x30; //unidades
-		temperatura /=10;
-		dir_inversa_reloj[7] = dir_reloj[6] = ((char) temperatura % 10) + 0x30; //decenas
-		temperatura /=10;
-		dir_inversa_reloj[6] = dir_reloj[5] = ((char) temperatura % 10) + 0x30; //centenas
-		dir_inversa_reloj[10] = dir_reloj[9] = '0';
+		if(temperatura < 100){
+			dir_inversa_reloj[8] = dir_reloj[7] = ((char) temperatura % 10) + 0x30; //unidades
+			temperatura /=10;
+			dir_inversa_reloj[7] = dir_reloj[6] = ((char) temperatura % 10) + 0x30; //decenas
+			dir_inversa_reloj[6] = dir_reloj[5] = '0'; //centenas
+			dir_inversa_reloj[10] = dir_reloj[9] = '0'; //decimales
+		}
+		else{
+			dir_inversa_reloj[8] = dir_reloj[7] = ((char) temperatura % 10) + 0x30; //unidades
+			temperatura /=10;
+			dir_inversa_reloj[7] = dir_reloj[6] = ((char) temperatura % 10) + 0x30; //decenas
+			temperatura /=10;
+			dir_inversa_reloj[6] = dir_reloj[5] = ((char) temperatura % 10) + 0x30; //centenas
+			dir_inversa_reloj[10] = dir_reloj[9] = '0';
+		}
 	}
 }
 
