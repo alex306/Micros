@@ -1,0 +1,432 @@
+#include <hidef.h> /* for EnableInterrupts macro */
+#include "derivative.h" /* include peripheral declarations */
+
+
+/**********         Variables motor           **********/
+unsigned char correr_secuencia = 0;
+unsigned char secuencia[]={0xF7,0xF3,0xFB,0xF9,0xFD,0xFC,0xFE,0xF6};//Secuencia de pasos usando lógica negativa (código gray)
+unsigned char posicion = 0;
+unsigned int value;
+unsigned int range;
+unsigned char cambiar_direccion = 0;
+unsigned int contador_timer;
+
+/**********         Variables LCD           **********/
+char initialization_ends = 0;
+char state = 0;
+char state2 = 0;
+char interruption_flag = 0;
+char dir_reloj[] = {"CW - 000.0*"};
+char dir_inversa_reloj[] = {"CCW - 000.0*"};
+char rps_arr[] = {"00.1 RPS"};
+char low;
+char high;
+char i2 = 0;
+char j2 = 0;
+char i3 = 0;
+char j3 = 0;
+char i4 = 0;
+char j4 = 0;
+char send_data_off = 0;
+char beginning_data = 0;
+
+char enviar_LCD = 0;
+char state3 = 0;
+char regresar_pos = 0;
+char state4 = 0;
+char state5 = 0;
+char send_data_off_2 = 0;
+char send_data_off_3 = 0;
+char send_data_off_4 = 0;
+char send_data_off_5 = 0;
+char enviar_RPS = 0;
+char i5 = 0;
+char j5 = 0;
+char state6 = 0;
+char state7 = 0;
+char pos_linea_dos = 0;
+char beginning_data2 = 0;
+char pos_linea_dos_2 = 1;
+char enviar_RPS_2 = 0;
+unsigned int pot = 0;
+unsigned int temp_limit_LCD = 250;
+unsigned char comando_temp_limit = 0;
+
+interrupt 12 void RTI_MTIM(void){
+	(void)MTIMSC;
+	MTIMSC_TOF  = 0;
+	interruption_flag = 1;
+}
+
+
+void seleccionar_comando(void);
+void check_buffer(void);
+char operacion();
+unsigned int operacion_grados(unsigned int grados_parametro);
+unsigned int operacionTemp(void);
+void led(void);
+void num_to_character(void);
+/********     LCD      ********/
+void init_LCD(void);
+void initial_data(void);
+void char_low_data(char letra);
+void char_high_data(char letra);
+void send_command(void);
+void send_dir(void);
+void send_inverse_dir(void);
+void send_RPS(void);
+//void char_low_command(char letra);
+//void char_high_command(char letra);
+
+void char_low_data(char letra){
+	unsigned char addr = letra;
+	low = (addr & 0x0F) << 4;
+	low = low | 0x0D;
+}
+
+void char_high_data(char letra){
+	unsigned char addr = letra;
+	high = ((addr >> 4) & 0x0F) << 4;
+	high = high | 0x0D;
+}
+
+/*void char_low_command(char letra){
+	unsigned char addr = letra;
+	low = (addr & 0x0F) << 4;
+	low = low | 0x0C;
+}
+
+void char_high_command(char letra){
+	unsigned char addr = letra;
+	high = ((addr >> 4) & 0x0F) << 4;
+	high = high | 0x0C;
+}*/
+
+void init_LCD(void){
+	switch(state){
+	
+	case 1:	/* Trigger del estado (0x30)*/
+		IICD = 0x4E; //0x3E  -----> dirección única
+		MTIMMOD = 8; // 512us
+		break;
+/* -----------------------------------------*/	
+	case 2:	
+		IICD = 0x0C;
+		MTIMMOD = 8; // 512us
+		break;
+/* -----------------------------------------*/	
+	case 3:
+		IICD = 0x28;
+		MTIMMOD = 8; // 512us
+		break;
+/* -----------------------------------------*/	
+	case 4:
+		IICD = 0x2C;
+		MTIMMOD = 8; // 512us
+		// segundo envio de cmd
+		break;
+/* -----------------------------------------*/	
+	case 5:
+		IICD = 0x28;
+		MTIMMOD = 8; // 512us
+		break;
+/* -----------------------------------------*/		
+	case 6://Mandar datos a partir de este estado
+		initialization_ends = 1;
+		state--;
+		break;
+/* -----------------------------------------*/		
+	default:
+		break;
+	}	
+}
+
+void initial_data(void){
+	
+	switch(state2){
+	
+	case 1:
+		if(dir_reloj[i2] != 0){
+			char_high_data(dir_reloj[i2++]);
+			IICD = high; //Upper bits
+			MTIMMOD = 8;
+		}
+		else{
+			send_data_off = 1;
+			state2 = 4;
+		}
+		break;
+		
+	case 2:
+		IICD = 0x08;
+		MTIMMOD = 8;
+		break;
+		
+	case 3:
+		char_low_data(dir_reloj[j2++]);
+		IICD = low;//Lower bits
+		MTIMMOD = 8;
+		break;
+		
+	case 4:
+		IICD = 0x08;
+		MTIMMOD = 8;
+		break;
+
+	case 5:
+		if(send_data_off == 0){
+			state2 = 0;
+		}
+		else{
+			beginning_data = 1;
+			beginning_data2 = 1;
+			pos_linea_dos_2 = 1;
+			//state2--;  //------------------> CHECAR
+		}
+		break;
+
+	default:
+		break;
+	}
+}
+
+void send_command(void){
+	
+	switch(state3){
+	
+	case 1:
+		IICD = 0x8C; 
+		MTIMMOD = 8;
+		break;
+		
+	case 2:
+		IICD = 0x08;
+		MTIMMOD = 8;
+		break;
+		
+	case 3:
+		IICD = 0x0C; 
+		MTIMMOD = 8;
+		break;
+		
+	case 4:
+		IICD = 0x08;
+		MTIMMOD = 8;
+		break;
+		
+	case 5:
+		if(beginning_data2 == 0){
+			
+		}
+		regresar_pos = 0;
+		enviar_LCD = 1;
+		//state3--;
+		break;
+	}
+}
+
+void send_dir(void){
+	
+	switch(state4){
+		
+	case 1:
+		if(dir_reloj[i3] == 0){
+			send_data_off_2 = 1;
+			enviar_LCD = 0;
+			state4 = 4;
+			enviar_LCD = 0;
+			i3=0;
+			j3=0;
+		}
+		else{
+			char_high_data(dir_reloj[i3++]);
+			IICD = high; //Upper bits
+			MTIMMOD = 8;
+		}
+		break;
+
+	case 2:
+		IICD = 0x08;
+		MTIMMOD = 8;
+		break;
+
+	case 3:
+		char_low_data(dir_reloj[j3++]);
+		IICD = low;//Lower bits
+		MTIMMOD = 8;
+		break;
+
+	case 4:
+		IICD = 0x08;
+		MTIMMOD = 8;
+		break;
+
+	case 5:
+		if(send_data_off_2 == 0){
+			state4 = 0;
+		}
+		break;
+
+	default:
+		break;
+	}
+}
+
+void send_inverse_dir(void){
+	
+	switch(state5){
+
+	case 1:
+		if(dir_inversa_reloj[i4] == 0){
+			send_data_off_3 = 1;
+			state5 = 4;
+			enviar_LCD = 0;
+			i4=0;
+			j4=0;
+		}
+		else{
+			char_high_data(dir_inversa_reloj[i4++]);
+			IICD = high; //Upper bits
+			MTIMMOD = 8;
+		}
+		break;
+
+	case 2:
+		IICD = 0x08;
+		MTIMMOD = 8;
+		break;
+
+	case 3:
+		char_low_data(dir_inversa_reloj[j4++]);
+		IICD = low;//Lower bits
+		MTIMMOD = 8;
+		break;
+
+	case 4:
+		IICD = 0x08;
+		MTIMMOD = 8;
+		break;
+
+	case 5:
+		if(send_data_off_3 == 0){
+			state5 = 0;
+		}
+		break;
+
+	default:
+		break;
+	}
+}
+
+void send_linea(void){
+	switch(state7){
+
+	case 1:
+		IICD = 0xCC;
+		MTIMMOD = 8;
+		break;
+
+	case 2:
+		IICD = 0x08;
+		MTIMMOD = 8;
+		break;
+
+	case 3:
+		PTBD = 0x0C;
+		MTIMMOD = 8;
+		break;
+
+	case 4:
+		IICD = 0x08;
+		MTIMMOD = 8;
+		break;
+
+	case 5:
+		if(beginning_data2 == 1){
+			enviar_RPS_2 = 1;
+			pos_linea_dos_2 = 0;
+		}
+		else{
+			enviar_RPS = 1;
+			pos_linea_dos = 0;
+		}
+		break;
+	}
+}
+
+void send_RPS(void){
+	
+	switch(state6){
+
+	case 1:
+		if(rps_arr[i5] == 0){
+			send_data_off_4 = 1;
+			state6 = 4;
+			enviar_RPS = 0;
+			enviar_RPS_2 = 0;
+			beginning_data2 = 0;
+			i5=0;
+			j5=0;
+		}
+		else{
+			char_high_data(rps_arr[i5++]);
+			IICD = high; //Upper bits
+			MTIMMOD = 8;
+		}
+		break;
+
+	case 2:
+		IICD = 0x08;
+		MTIMMOD = 8;
+		break;
+
+	case 3:
+		char_low_data(rps_arr[j5++]);
+		IICD = low;//Lower bits
+		MTIMMOD = 8;
+		break;
+
+	case 4:
+		IICD = 0x08;
+		MTIMMOD = 8;
+		break;
+
+	case 5:
+		if(send_data_off_4 == 0){
+			state6 = 0;
+		}
+		break;
+
+	default:
+		break;
+	}
+}
+
+void main(void) {
+	
+	//SOPT2_IICPS = 1; // para pines SCL --> 8 , SDA --> 10 
+	IICF = 0xC7;
+	IICC = 0xB8;
+	
+	MTIMSC = 0x40; //Habilita interrupcion
+	MTIMCLK = 0x08; //PS = 256
+	MTIMMOD = 255; // 16.32 ms
+	
+	EnableInterrupts;
+	for(;;) {
+		if(interruption_flag == 1){
+			interruption_flag = 0;
+			if(initialization_ends == 1){
+				if(beginning_data == 0){
+					initial_data();
+					state2++;
+				}
+			}
+			else{
+				init_LCD();
+				state++;
+			}
+		}
+		__RESET_WATCHDOG();
+	} 
+}
