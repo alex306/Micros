@@ -83,6 +83,8 @@ char enviar_RPS_2 = 0;
 unsigned int pot = 0;
 unsigned int temp_limit_LCD = 250;
 unsigned char comando_temp_limit = 0;
+unsigned char rps_run = 0;
+unsigned char contador_rps = 0;
 
 void seleccionar_comando(void);
 void check_buffer(void);
@@ -157,11 +159,17 @@ interrupt 16 void UART_tx(void){ //transmit
 interrupt 7 void RTI_TPM(void){
 	(void)TPMSC;
 	TPMSC_TOF = 0; //Timer Overflow Flag
+	contador_rps++;
 	tiempo_timer++;
 	tiempo_LED++;
 	if(tiempo_timer == 5000){
 		checar_temperatura = 1;
 		tiempo_timer = 0;
+	}
+	// Velocidad máxima = 3ms
+	if(contador_rps == 100){ //**************************************************Velocidad en ms*********************************************
+		contador_rps = 0;
+		rps_run = 1;
 	}
 	encender_LED = 1;
 	correr_secuencia = 1; //Conexion entre el main y la interrupcion  
@@ -1023,100 +1031,47 @@ void main(void) {
 			checar_arreglo = 0;
 			check_buffer();
 		}
-		if(correr_secuencia == 1){
-			if(timer == 0){
-				if(on_off == 1){
-					if(cambiar_direccion == 0){ //Sentido horario
-						PTBD = secuencia[posicion++];
-						if(posicion == 8){ //si llega a la ultima posición regresa al inicio
-							posicion=0;
-						}
-					}
-					if(cambiar_direccion == 1){ //Sentido anti-horario
-						PTBD = secuencia[i--];
-						if(i == 255){
-							i=7;
-						}
-					}
-					correr_secuencia = 0;
-				}
-				if(on_off == 0){
-					if(movimiento == 1){
-						vueltas_arreglo = operacion_grados(grados);
-						if(mover_en_grados < vueltas_arreglo){
-							mover_en_grados++;
-							if(cambiar_direccion == 0){ //Sentido horario
-								PTBD = secuencia[posicion++];
-								if(posicion == 8){ //si llega a la ultima posición regresa al inicio
-									posicion=0;
-								}
-							}
-							if(cambiar_direccion == 1){ //Sentido anti-horario
-								PTBD = secuencia[i--];
-								if(i == 255){
-									i=7;
-								}
-							}
-						}
-						else{
-							mover_en_grados = 0;
-							movimiento=0;
-						}
-						correr_secuencia = 0;
+		if(rps_run == 1){
+			if(on_off == 1){
+				if(cambiar_direccion == 0){ //Sentido horario
+					PTBD = secuencia[posicion++];
+					if(posicion == 8){ //si llega a la ultima posición regresa al inicio
+						posicion=0;
 					}
 				}
+				if(cambiar_direccion == 1){ //Sentido anti-horario
+					PTBD = secuencia[i--];
+					if(i == 255){
+						i=7;
+					}
+				}
+				rps_run = 0;
+				correr_secuencia = 0;
 			}
-			else{
-				if(contador_generar_tiempo < 50000){
-					contador_generar_tiempo++;
-					if(contador_generar_tiempo2 < velocidad){
-						contador_generar_tiempo=0;
-						contador_generar_tiempo2++;
+			if(on_off == 0){
+				if(movimiento == 1){
+					vueltas_arreglo = operacion_grados(grados);
+					if(mover_en_grados < vueltas_arreglo){
+						mover_en_grados++;
+						if(cambiar_direccion == 0){ //Sentido horario
+							PTBD = secuencia[posicion++];
+							if(posicion == 8){ //si llega a la ultima posición regresa al inicio
+								posicion=0;
+							}
+						}
+						if(cambiar_direccion == 1){ //Sentido anti-horario
+							PTBD = secuencia[i--];
+							if(i == 255){
+								i=7;
+							}
+						}
 					}
 					else{
-						if(on_off == 1){
-							if(cambiar_direccion == 0){ //Sentido horario
-								PTBD = secuencia[posicion++];
-								if(posicion == 8){ //si llega a la ultima posición regresa al inicio
-									posicion=0;
-								}
-							}
-							if(cambiar_direccion == 1){ //Sentido anti-horario
-								PTBD = secuencia[i--];
-								if(i == 255){
-									i=7;
-								}
-							}
-							correr_secuencia = 0;
-						}
-						if(on_off == 0){
-							if(movimiento == 1){
-								vueltas_arreglo = operacion_grados(grados);
-								if(mover_en_grados < vueltas_arreglo){
-									mover_en_grados++;
-									if(cambiar_direccion == 0){ //Sentido horario
-										PTBD = secuencia[posicion++];
-										if(posicion == 8){ //si llega a la ultima posición regresa al inicio
-											posicion=0;
-										}
-									}
-									if(cambiar_direccion == 1){ //Sentido anti-horario
-										PTBD = secuencia[i--];
-										if(i == 255){
-											i=7;
-										}
-									}
-								}
-								else{
-									mover_en_grados = 0;
-									movimiento=0;
-								}
-								correr_secuencia = 0;
-							}
-						}
-						contador_generar_tiempo = 0;
-						contador_generar_tiempo2 = 0;
+						mover_en_grados = 0;
+						movimiento=0;
 					}
+					rps_run = 0;
+					correr_secuencia = 0;
 				}
 			}
 		}
