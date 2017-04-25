@@ -23,7 +23,7 @@ unsigned char cuenta = 15;
 unsigned char counter, counter2, j, coincidencia;
 unsigned char enable_transmission, unidades, decenas, decenas2, unidades2, timer, decenas3, unidades3, decimal, movimiento, checar_arreglo;
 unsigned int centenas, grados, mover_en_grados, vueltas_arreglo, contador_generar_tiempo, centenas2, contador_generar_tiempo2, centenas3;
-unsigned long velocidad;
+unsigned int velocidad;
 unsigned char imprimir_comando_done = 0;
 unsigned int millares, temperatura_limite, temperatura_ADC;
 unsigned int tiempo_timer = 0;
@@ -48,9 +48,9 @@ char initialization_ends = 0;
 char state = 0;
 char state2 = 0;
 char interruption_flag = 0;
-char dir_reloj[] = {"CW - 000.0*"};
-char dir_inversa_reloj[] = {"CCW - 000.0*"};
-char rps_arr[] = {"00.1 RPS"};
+char dir_reloj[] = {"CW - 000.0 C"};
+char dir_inversa_reloj[] = {"CCW - 000.0 C"};
+char rps_arr[] = {"00.0 RPM"};
 char low;
 char high;
 char i2 = 0;
@@ -84,7 +84,8 @@ unsigned int pot = 0;
 unsigned int temp_limit_LCD = 250;
 unsigned char comando_temp_limit = 0;
 unsigned char rps_run = 0;
-unsigned char contador_rps = 0;
+unsigned int contador_rps = 0;
+unsigned int rps_velocidad = 0;
 
 void seleccionar_comando(void);
 void check_buffer(void);
@@ -102,6 +103,7 @@ void send_command(void);
 void send_dir(void);
 void send_inverse_dir(void);
 void send_RPS(void);
+unsigned int operacionRPS(void);
 //void char_low_command(char letra);
 //void char_high_command(char letra);
 
@@ -167,7 +169,7 @@ interrupt 7 void RTI_TPM(void){
 		tiempo_timer = 0;
 	}
 	// Velocidad máxima = 3ms
-	if(contador_rps == 100){ //**************************************************Velocidad en ms*********************************************
+	if(contador_rps == rps_velocidad){ //**************************************************Velocidad en ms*********************************************
 		contador_rps = 0;
 		rps_run = 1;
 	}
@@ -251,7 +253,12 @@ void initial_data(void){
 	case 1:
 		if(dir_reloj[i2] != 0){
 			char_high_data(dir_reloj[i2++]);
-			IICD = high; //Upper bits
+			if(i2 == 11){
+				IICD = 0xDD;
+			}
+			else{
+				IICD = high; //Upper bits
+			}
 			MTIMMOD = 8;
 		}
 		else{
@@ -267,7 +274,12 @@ void initial_data(void){
 		
 	case 3:
 		char_low_data(dir_reloj[j2++]);
-		IICD = low;//Lower bits
+		if(i2 == 11){
+			IICD = 0xFD;
+		}
+		else{
+			IICD = low;//Lower bits
+		}
 		MTIMMOD = 8;
 		break;
 		
@@ -343,7 +355,12 @@ void send_dir(void){
 		}
 		else{
 			char_high_data(dir_reloj[i3++]);
-			IICD = high; //Upper bits
+			if(i3 == 11){
+				IICD = 0xDD;
+			}
+			else{
+				IICD = high; //Upper bits
+			}
 			MTIMMOD = 8;
 		}
 		break;
@@ -355,7 +372,12 @@ void send_dir(void){
 
 	case 3:
 		char_low_data(dir_reloj[j3++]);
-		IICD = low;//Lower bits
+		if(i3 == 11){
+			IICD = 0xFD;
+		}
+		else{
+			IICD = low;//Lower bits
+		}
 		MTIMMOD = 8;
 		break;
 
@@ -389,7 +411,12 @@ void send_inverse_dir(void){
 		}
 		else{
 			char_high_data(dir_inversa_reloj[i4++]);
-			IICD = high; //Upper bits
+			if(i4 == 12){
+				IICD =0xDD;
+			}
+			else{
+				IICD = high; //Upper bits
+			}
 			MTIMMOD = 8;
 		}
 		break;
@@ -401,7 +428,12 @@ void send_inverse_dir(void){
 
 	case 3:
 		char_low_data(dir_inversa_reloj[j4++]);
-		IICD = low;//Lower bits
+		if(i4 == 12){
+			IICD = 0xFD;
+		}
+		else{
+			IICD = low;//Lower bits
+		}
 		MTIMMOD = 8;
 		break;
 
@@ -585,29 +617,9 @@ void check_buffer(void)
 						//i=0;
 						break;
 					}
-					velocidad = unidades2 + decenas2 + centenas2 ;
-					if(velocidad > 950){
-						velocidad += 100000;
-					}
-					if((velocidad > 900) && (velocidad < 950)){
-						velocidad += 10000;
-					}
-					if((velocidad > 800) && (velocidad < 900)){
-						velocidad += 1000;
-					}
-					if((velocidad > 600) && (velocidad < 800)){
-						velocidad += 500;
-					}
-					if((velocidad > 400) && (velocidad < 600)){
-						velocidad += 250;
-					}
-					if((velocidad > 200) && (velocidad < 400)){
-						velocidad += 125;
-					}
-					if((velocidad > 0) && (velocidad < 200)){
-						velocidad += 62;
-					}
-					//velocidad = unidades2 + decenas2 + centenas2 + 1000;
+					velocidad = unidades2 + decenas2 + centenas2;
+					rps_velocidad = operacionRPS();
+					contador_rps = 0;
 					if(coincidencia == 5){
 						choose_command = 0;
 						imprimir_comando_done = 1;
@@ -861,6 +873,12 @@ unsigned int operacion_grados(unsigned int grados_parametro){
 unsigned int operacionTemp(void){ // Metodo para formatear el valor del ADC segun los pasos para que el motor de una revolucion completa
 	pot+=25; 
 	return pot;
+}
+
+unsigned int operacionRPS(void){
+	unsigned int rps;
+	rps = 3000/velocidad;
+	return rps;
 }
 
 void enciende_led(void){
