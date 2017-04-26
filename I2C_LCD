@@ -89,6 +89,14 @@ unsigned int rps_velocidad = 0;
 char initialization_LCD = 1;
 char initiate_data = 0;
 char enviar_dir_LCD = 0;
+char initial_rps_data = 0;
+char initial_rps = 0;
+char state8 = 0;
+char state9 = 0;
+char i6 = 0;
+char j6 = 0;
+char i7 = 0;
+char j7 = 0;
 
 void seleccionar_comando(void);
 void check_buffer(void);
@@ -267,6 +275,7 @@ void initial_data(void){
 		else{
 			send_data_off = 1;
 			state2 = 4;
+			initial_rps = 1;
 		}
 		break;
 		
@@ -297,10 +306,7 @@ void initial_data(void){
 		}
 		else{
 			initiate_data = 0;
-			//beginning_data = 1;
-			//beginning_data2 = 1;
-			//pos_linea_dos_2 = 1;
-			//state2--;  //------------------> CHECAR
+			initial_rps = 1;
 		}
 		break;
 
@@ -334,10 +340,8 @@ void send_command(void){
 		break;
 		
 	case 5:
-		//state3 = 0;
 		regresar_pos = 0;
 		enviar_dir_LCD = 1;
-		//state3--;
 		break;
 	}
 }
@@ -494,6 +498,35 @@ void send_linea(void){
 	}
 }
 
+void send_linea_initial(void){
+	switch(state8){
+
+	case 1:
+		IICD = 0xCC;
+		MTIMMOD = 8;
+		break;
+
+	case 2:
+		IICD = 0x08;
+		MTIMMOD = 8;
+		break;
+
+	case 3:
+		IICD = 0x0C;
+		MTIMMOD = 8;
+		break;
+
+	case 4:
+		IICD = 0x08;
+		MTIMMOD = 8;
+		break;
+
+	case 5:
+		initial_rps_data = 1;
+		break;
+	}
+}
+
 void send_RPS(void){
 	
 	switch(state6){
@@ -534,6 +567,54 @@ void send_RPS(void){
 	case 5:
 		if(send_data_off_4 == 0){
 			state6 = 0;
+		}
+		break;
+
+	default:
+		break;
+	}
+}
+
+void send_RPS_initial(void){
+	
+	switch(state9){
+
+	case 1:
+		if(rps_arr[i6] == 0){
+			send_data_off_4 = 1;
+			i6=0;
+			j6=0;
+		}
+		else{
+			char_high_data(rps_arr[i6++]);
+			IICD = high; //Upper bits
+			MTIMMOD = 8;
+		}
+		break;
+
+	case 2:
+		IICD = 0x08;
+		MTIMMOD = 8;
+		break;
+
+	case 3:
+		char_low_data(rps_arr[j6++]);
+		IICD = low;//Lower bits
+		MTIMMOD = 8;
+		break;
+
+	case 4:
+		IICD = 0x08;
+		MTIMMOD = 8;
+		break;
+
+	case 5:
+		if(send_data_off_4 == 0){
+			state9 = 0;
+		}
+		else{
+			initial_rps = 0;
+			initial_rps_data = 0;
 		}
 		break;
 
@@ -1001,7 +1082,20 @@ void main(void) {
 				initial_data();
 				state2++;
 			}
+			if(initial_rps == 1){
+				if(initial_rps_data == 1){
+					send_RPS_initial();
+					state9++;
+				}
+				else{
+					send_linea_initial();
+					state8++;
+				}
+			}
 			if(regresar_pos == 1){
+				
+			}
+			/*if(regresar_pos == 1){
 				send_command();
 				state3++;
 				//state5=0;
@@ -1023,7 +1117,7 @@ void main(void) {
 			else{
 				state4 = 0;
 				state5 = 0;
-			}
+			}*/
 			/*if(initialization_ends == 1){
 				if(beginning_data == 0){
 					initial_data();
