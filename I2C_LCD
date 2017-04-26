@@ -78,8 +78,8 @@ char state6 = 0;
 char state7 = 0;
 char pos_linea_dos = 0;
 char beginning_data2 = 0;
-char pos_linea_dos_2 = 1;
-char enviar_RPS_2 = 0;
+char pos_linea_inicial = 0;
+char enviar_RPS_inicial = 0;
 unsigned int pot = 0;
 unsigned int temp_limit_LCD = 5000;
 unsigned char comando_temp_limit = 0;
@@ -91,6 +91,10 @@ char wait_LCD = 0;
 unsigned int contador_wait_LCD = 0;
 unsigned char undone = 0;
 unsigned int temperatura=0;
+char state_linea_inicial = 0;
+char state_rps_inicial = 0;
+char i6 = 0;
+char j6 = 0;
 
 void seleccionar_comando(void);
 void check_buffer(void);
@@ -204,22 +208,10 @@ void char_high_data(char letra){
 	high = high | 0x0D;
 }
 
-/*void char_low_command(char letra){
-	unsigned char addr = letra;
-	low = (addr & 0x0F) << 4;
-	low = low | 0x0C;
-}
-
-void char_high_command(char letra){
-	unsigned char addr = letra;
-	high = ((addr >> 4) & 0x0F) << 4;
-	high = high | 0x0C;
-}*/
-
 void init_LCD(void){
 	switch(state){
 	
-	case 1:	/* Trigger del estado (0x30)*/
+	case 1:	
 		IICD = 0x4E; //0x3E  -----> dirección única
 		MTIMMOD = 8; // 512us
 		break;
@@ -302,9 +294,9 @@ void initial_data(void){
 			state2 = 0;
 		}
 		else{
-			beginning_data = 1;
+			beginning_data = 0;
 			beginning_data2 = 1;
-			pos_linea_dos_2 = 1;
+			pos_linea_inicial = 1;
 			//state2--;  //------------------> CHECAR
 		}
 		break;
@@ -355,10 +347,10 @@ void send_dir(void){
 		
 	case 1:
 		if(dir_reloj[i3] == 0){
-			send_data_off_2 = 1;
+			//send_data_off_2 = 1;
 			enviar_LCD = 0;
 			state4 = 4;
-			enviar_LCD = 0;
+			//enviar_LCD = 0;
 			undone = 1;
 			i3=0;
 			j3=0;
@@ -397,7 +389,7 @@ void send_dir(void){
 		break;
 
 	case 5:
-		if(send_data_off_2 == 0){
+		if(enviar_LCD == 1){
 			state4 = 0;
 		}
 		break;
@@ -413,7 +405,7 @@ void send_inverse_dir(void){
 
 	case 1:
 		if(dir_inversa_reloj[i4] == 0){
-			send_data_off_3 = 1;
+			//send_data_off_3 = 1;
 			state5 = 4;
 			enviar_LCD = 0;
 			undone = 1;
@@ -454,8 +446,95 @@ void send_inverse_dir(void){
 		break;
 
 	case 5:
-		if(send_data_off_3 == 0){
+		if(enviar_LCD == 1){
 			state5 = 0;
+		}
+		break;
+
+	default:
+		break;
+	}
+}
+
+void send_linea_inicial(void){
+	switch(state_linea_inicial){
+
+	case 1:
+		IICD = 0xCC;
+		MTIMMOD = 8;
+		break;
+
+	case 2:
+		IICD = 0x08;
+		MTIMMOD = 8;
+		break;
+
+	case 3:
+		IICD = 0x0C;
+		MTIMMOD = 8;
+		break;
+
+	case 4:
+		IICD = 0x08;
+		MTIMMOD = 8;
+		break;
+
+	case 5:
+		pos_linea_inicial = 0;
+		enviar_RPS_inicial = 1;
+		/*if(beginning_data2 == 1){
+			enviar_RPS_inicial = 1;
+			pos_linea_inicial = 0;
+		}
+		else{
+			enviar_RPS = 1;
+			pos_linea_dos = 0;
+		}*/
+		break;
+	}
+}
+
+void send_RPS_inicial(void){
+	
+	switch(state_rps_inicial){
+
+	case 1:
+		if(rps_arr[i6] == 0){
+			//send_data_off_4 = 1;
+			state_rps_inicial = 4;
+			//enviar_RPS = 0;
+			enviar_RPS_inicial = 0;
+			beginning_data2 = 0;
+			undone = 1;
+			//i6=0;
+			//j6=0;
+		}
+		else{
+			char_high_data(rps_arr[i6++]);
+			IICD = high; //Upper bits
+			MTIMMOD = 8;
+		}
+		break;
+
+	case 2:
+		IICD = 0x08;
+		MTIMMOD = 8;
+		break;
+
+	case 3:
+		char_low_data(rps_arr[j6++]);
+		IICD = low;//Lower bits
+		MTIMMOD = 8;
+		break;
+
+	case 4:
+		IICD = 0x08;
+		MTIMMOD = 8;
+		break;
+
+	case 5:
+		if(enviar_RPS_inicial == 1){ // -----> CHECAR
+			state_rps_inicial = 0;
 		}
 		break;
 
@@ -488,14 +567,16 @@ void send_linea(void){
 		break;
 
 	case 5:
-		if(beginning_data2 == 1){
-			enviar_RPS_2 = 1;
-			pos_linea_dos_2 = 0;
+		pos_linea_dos = 0;
+		enviar_RPS = 1;
+		/*if(beginning_data2 == 1){
+			enviar_RPS_inicial = 1;
+			pos_linea_inicial = 0;
 		}
 		else{
 			enviar_RPS = 1;
 			pos_linea_dos = 0;
-		}
+		}*/
 		break;
 	}
 }
@@ -509,8 +590,8 @@ void send_RPS(void){
 			send_data_off_4 = 1;
 			state6 = 4;
 			enviar_RPS = 0;
-			enviar_RPS_2 = 0;
-			beginning_data2 = 0;
+			//enviar_RPS_inicial = 0;
+			//beginning_data2 = 0;
 			undone = 1;
 			i5=0;
 			j5=0;
@@ -539,7 +620,7 @@ void send_RPS(void){
 		break;
 
 	case 5:
-		if(send_data_off_4 == 0){
+		if(enviar_RPS == 1){
 			state6 = 0;
 		}
 		break;
@@ -637,6 +718,7 @@ void check_buffer(void)
 						imprimir_comando_done = 1;
 						SCIC2_TIE = 1;
 						state6 = 0;
+						state7 = 0;
 						pos_linea_dos = 1;  //****************************************************************************************
 						coincidencia = 0;
 						timer = 1;
@@ -1016,25 +1098,25 @@ void main(void) {
 		if(interruption_flag == 1){
 			interruption_flag = 0;
 			if(initialization_ends == 1){
-				if(beginning_data == 0){
+				if(beginning_data == 1){
 					initial_data();
 					state2++;
 				}
 				if(beginning_data2 == 1){
-					if(pos_linea_dos_2 == 1){
-						send_linea();
-						state7++;
-						state6=0;
+					if(pos_linea_inicial == 1){
+						send_linea_inicial();
+						state_linea_inicial++;
+						state_rps_inicial=0;
 					}
-					if(enviar_RPS_2 == 1){
-						send_RPS();
-						state6++;
+					if(enviar_RPS_inicial == 1){
+						send_RPS_inicial();
+						state_rps_inicial++;
 					}
 				}
 				if(pos_linea_dos == 1){
 					send_linea();
-					state7++;
-					state6=0;
+					state7++; // ----> Checar si se regresa el state7 a cero
+					//state6=0; // -----> CHECAR
 				}
 				if(enviar_RPS == 1){
 					send_RPS();
