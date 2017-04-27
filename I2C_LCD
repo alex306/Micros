@@ -81,7 +81,7 @@ char beginning_data2 = 0;
 char pos_linea_inicial = 0;
 char enviar_RPS_inicial = 0;
 unsigned int pot = 0;
-unsigned int temp_limit_LCD = 5000;
+unsigned int temp_limit_LCD = 2000;
 unsigned char comando_temp_limit = 0;
 unsigned char rps_run = 0;
 unsigned int contador_rps = 0;
@@ -239,6 +239,7 @@ void init_LCD(void){
 /* -----------------------------------------*/		
 	case 6://Mandar datos a partir de este estado
 		initialization_ends = 1;
+		beginning_data = 1;
 		state--;
 		break;
 /* -----------------------------------------*/		
@@ -965,11 +966,6 @@ unsigned int operacion_grados(unsigned int grados_parametro){
 	return div;
 }
 
-unsigned int operacionTemp(void){ // Metodo para formatear el valor del ADC segun los pasos para que el motor de una revolucion completa
-	pot+=25; 
-	return pot;
-}
-
 unsigned int operacionRPS(void){
 	unsigned int rps;
 	rps = 3000/velocidad;
@@ -1001,7 +997,7 @@ void enciende_led(void){
 }*/
 
 void check_temp(void){
-	if(temp_limit_LCD <= temperatura){
+	if(temp_limit_LCD <= operacion()){
 		on_off = 0;
 		imprimir_comando_tempover = 1;
 		SCIC2_TIE = 1;
