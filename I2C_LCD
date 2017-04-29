@@ -93,10 +93,11 @@ char state_linea_inicial = 0;
 char state_rps_inicial = 0;
 char i6 = 0;
 char j6 = 0;
+long div;
 
 void seleccionar_comando(void);
 void check_buffer(void);
-unsigned int operacion_grados(unsigned int grados_parametro);
+long operacion_grados(long grados_parametro);
 unsigned int operacionTemp(void);
 void enciende_led(void);
 
@@ -900,8 +901,7 @@ unsigned int operacion(void){ // Metodo para formatear el valor del ADC segun lo
 	return op;
 }
 
-unsigned int operacion_grados(unsigned int grados_parametro){
-	unsigned int div;
+long operacion_grados(long grados_parametro){
 	div=(grados_parametro*96)/(360);
 	return div;
 }
@@ -969,8 +969,8 @@ void temperatura_LCD(void){
 void main(void) {
 	
 	//SOPT2_IICPS = 1; // para pines SCL --> 8 , SDA --> 10 
-	IICF = 0xC7;
-	IICC = 0xB8;
+	IICF = 0xC7; // 1100 0111
+	IICC = 0xB8; // 1011 1000
 
 	PTBDD=0xFF;
 	PTBD = 0x00;
