@@ -9,8 +9,6 @@ unsigned char comando_STEPCW[] = {"STEPCW"};
 unsigned char comando_TEMPLIMIT[] = {"TEMPLIMIT:"};
 unsigned char command_ex[] = {"DONE\n\r"};
 unsigned char command_unrecognized[] = {"Comando no reconocido"};
-//unsigned char command_tempeture[] = {"Temperatura es    .  \n\r"}; //15 16 17 19
-unsigned char command_tempeture[] = {"Temperatura es \n\r"};
 unsigned char mensaje_temp_limit[] = {"Overtemperature detected\n\r"};
 unsigned char command_turnoff[] = {"Apagar motor"};
 unsigned char i, c, caracter, on_off, size, choose_command, imprimir_comando;
@@ -100,8 +98,8 @@ void seleccionar_comando(void);
 void check_buffer(void);
 unsigned int operacion_grados(unsigned int grados_parametro);
 unsigned int operacionTemp(void);
-void led(void);
-void num_to_character(void);
+void enciende_led(void);
+
 /********     LCD      ********/
 void init_LCD(void);
 void initial_data(void);
@@ -113,8 +111,6 @@ void send_inverse_dir(void);
 void send_RPS(void);
 unsigned int operacionRPS(void);
 unsigned int operacion(void);
-//void char_low_command(char letra);
-//void char_high_command(char letra);
 
 interrupt 15 void UART_rx(void) //receive
 {
@@ -135,7 +131,6 @@ interrupt 16 void UART_tx(void){ //transmit
 	if(imprimir_comando_done == 1){
 		if(command_ex[count_comando] != 0){
 			SCID = command_ex[count_comando++];
-			//count_comando++;
 		}
 		else{
 			count_comando=0;
@@ -153,18 +148,6 @@ interrupt 16 void UART_tx(void){ //transmit
 			SCIC2_TIE = 0;
 		}
 	}
-	/*if((imprimir_temperatura == 1) && (imprimir_comando_done == 0)){
-		if(count_comando < 24){
-			SCID = command_tempeture[count_comando++];
-			//count_comando++;
-		}
-		else{
-			//SCID = temperatura_limite;
-			count_comando=0;
-			imprimir_temperatura = 0;
-			SCIC2_TIE = 0;
-		}
-	}*///28
 }
 
 interrupt 7 void RTI_TPM(void){
@@ -174,15 +157,15 @@ interrupt 7 void RTI_TPM(void){
 	tiempo_timer++;
 	tiempo_LED++;
 	contador_wait_LCD++;
-	if(tiempo_timer == 5000){
+	if(tiempo_timer == 5000){ // Para checar temperatura cada 5 segundos
 		checar_temperatura = 1;
 		tiempo_timer = 0;
 	}
-	if(contador_wait_LCD == 50){//200
+	if(contador_wait_LCD == 50){//Para controlar tiempo de espera entre actualizacion de LCD
 		wait_LCD = 1;
 		contador_wait_LCD = 0;
 	}
-	if(contador_rps == rps_velocidad){ //**************************************************Velocidad en ms*********************************************
+	if(contador_rps == rps_velocidad){ // Para el comando RPS
 		contador_rps = 0;
 		rps_run = 1;
 	}
@@ -298,7 +281,6 @@ void initial_data(void){
 			beginning_data = 0;
 			beginning_data2 = 1;
 			pos_linea_inicial = 1;
-			//state2--;  //------------------> CHECAR
 		}
 		break;
 
@@ -337,7 +319,9 @@ void send_command(void){
 		}
 		regresar_pos = 0;
 		enviar_LCD = 1;
-		//state3--;
+		break;
+		
+	default:
 		break;
 	}
 }
@@ -406,7 +390,6 @@ void send_inverse_dir(void){
 
 	case 1:
 		if(dir_inversa_reloj[i4] == 0){
-			//send_data_off_3 = 1;
 			state5 = 4;
 			enviar_LCD = 0;
 			undone = 1;
@@ -483,14 +466,9 @@ void send_linea_inicial(void){
 	case 5:
 		pos_linea_inicial = 0;
 		enviar_RPS_inicial = 1;
-		/*if(beginning_data2 == 1){
-			enviar_RPS_inicial = 1;
-			pos_linea_inicial = 0;
-		}
-		else{
-			enviar_RPS = 1;
-			pos_linea_dos = 0;
-		}*/
+		break;
+		
+	default:
 		break;
 	}
 }
@@ -501,14 +479,10 @@ void send_RPS_inicial(void){
 
 	case 1:
 		if(rps_arr[i6] == 0){
-			//send_data_off_4 = 1;
 			state_rps_inicial = 4;
-			//enviar_RPS = 0;
 			enviar_RPS_inicial = 0;
 			beginning_data2 = 0;
 			undone = 1;
-			//i6=0;
-			//j6=0;
 		}
 		else{
 			char_high_data(rps_arr[i6++]);
@@ -534,7 +508,7 @@ void send_RPS_inicial(void){
 		break;
 
 	case 5:
-		if(enviar_RPS_inicial == 1){ // -----> CHECAR
+		if(enviar_RPS_inicial == 1){ 
 			state_rps_inicial = 0;
 		}
 		break;
@@ -570,14 +544,9 @@ void send_linea(void){
 	case 5:
 		pos_linea_dos = 0;
 		enviar_RPS = 1;
-		/*if(beginning_data2 == 1){
-			enviar_RPS_inicial = 1;
-			pos_linea_inicial = 0;
-		}
-		else{
-			enviar_RPS = 1;
-			pos_linea_dos = 0;
-		}*/
+		break;
+
+	default:
 		break;
 	}
 }
@@ -591,8 +560,6 @@ void send_RPS(void){
 			send_data_off_4 = 1;
 			state6 = 4;
 			enviar_RPS = 0;
-			//enviar_RPS_inicial = 0;
-			//beginning_data2 = 0;
 			undone = 1;
 			i5=0;
 			j5=0;
@@ -700,7 +667,6 @@ void check_buffer(void)
 							choose_command = 1;
 							imprimir_comando = 1;
 							coincidencia = 0;
-							//i=0;
 							break;
 						}
 					}
@@ -729,7 +695,6 @@ void check_buffer(void)
 						choose_command = 1;
 						imprimir_comando = 1;
 						coincidencia = 0;
-						//i=0;
 						break;
 					}
 				}
@@ -737,7 +702,6 @@ void check_buffer(void)
 					choose_command = 1;
 					imprimir_comando = 1;
 					coincidencia = 0;
-					//i=0;
 					break;
 				}
 			}
@@ -751,7 +715,6 @@ void check_buffer(void)
 						imprimir_comando_done = 1;
 						SCIC2_TIE = 1;
 						coincidencia = 0;
-						//i=0;
 						state3 = 0;
 						state4 = 0;
 						state5 = 0;
@@ -763,7 +726,6 @@ void check_buffer(void)
 						imprimir_comando_done = 1;
 						SCIC2_TIE = 1;
 						coincidencia = 0;
-						//i=0;
 						state3 = 0;
 						state4 = 0;
 						state5 = 0;
@@ -772,7 +734,6 @@ void check_buffer(void)
 					}
 					else{
 						coincidencia = 0;
-						//i=0;
 						break;
 					}
 				}
@@ -793,7 +754,6 @@ void check_buffer(void)
 						SCIC2_TIE = 1;
 						on_off = 0;
 						coincidencia = 0;
-						//i=0;
 						break;
 					}
 					else if(temp[7] == 'N'){ //Encendido
@@ -801,14 +761,12 @@ void check_buffer(void)
 						SCIC2_TIE = 1;
 						on_off = 1;
 						coincidencia = 0;
-						//i=0;
 						break;
 					}
 					else{
 						choose_command = 1;
 						imprimir_comando = 1;
 						coincidencia = 0;
-						//i=0;
 						break;
 					}
 				}
@@ -817,7 +775,6 @@ void check_buffer(void)
 				choose_command = 1;
 				imprimir_comando = 1;
 				coincidencia = 0;
-				//i=0;
 				break;
 			}
 		}
@@ -844,7 +801,6 @@ void check_buffer(void)
 							choose_command = 1;
 							imprimir_comando = 1;
 							coincidencia = 0;
-							//i=0;
 							break;
 						}
 					}
@@ -852,13 +808,9 @@ void check_buffer(void)
 						choose_command = 1;
 						imprimir_comando = 1;
 						coincidencia = 0;
-						//i=0;
 						break;
 					}
 					grados = unidades + decenas + centenas;
-					//choose_command = 0;
-					//*********************************************************
-					//on_off = 0;
 					if(on_off == 0){
 						imprimir_comando_done = 1;
 						SCIC2_TIE = 1;
@@ -870,7 +822,6 @@ void check_buffer(void)
 					else{
 						choose_command = 2;
 						imprimir_comando = 1;
-						//i=0;
 						break;
 					}
 				}
@@ -878,7 +829,6 @@ void check_buffer(void)
 					choose_command = 1;
 					imprimir_comando = 1;
 					coincidencia = 0;
-					//i=0;
 					break;
 				}
 			}
@@ -900,7 +850,6 @@ void check_buffer(void)
 						coincidencia++;
 						if((temp[12] >= '0') && (temp[12] <= '9')){
 							decenas3 = temp[12] - 0x30;
-							//decenas3*=10;
 							coincidencia++;
 							if((temp[14] >= '0') && (temp[14] <= '9')){
 								unidades3 = temp[14] - 0x30;
@@ -908,7 +857,6 @@ void check_buffer(void)
 							}
 							else{
 								coincidencia = 0;
-								//i=0;
 								break;
 							}
 						}
@@ -916,7 +864,6 @@ void check_buffer(void)
 							choose_command = 1;
 							imprimir_comando = 1;
 							coincidencia = 0;
-							//i=0;
 							break;
 						}
 					}
@@ -927,21 +874,14 @@ void check_buffer(void)
 						//i=0;
 						break;
 					}
-					//command_tempeture[15] = temp[10];
-					//command_tempeture[16] = temp[11];
-					//command_tempeture[17] = temp[12];
-					//command_tempeture[19] = temp[14];
-					//temperatura_limite = unidades3 + decenas3 + centenas3 + millares;
 					temp_limit_LCD = (decenas3 + centenas3 + millares)*10;
 					coincidencia = 0;
-					//i=0;
 					imprimir_comando_done = 1;
 					SCIC2_TIE = 1;
 				}
 			}
 		}
 		else{
-			//i=0;
 			choose_command = 1;
 			imprimir_comando = 1;
 			coincidencia = 0;
@@ -962,7 +902,7 @@ unsigned int operacion(void){ // Metodo para formatear el valor del ADC segun lo
 
 unsigned int operacion_grados(unsigned int grados_parametro){
 	unsigned int div;
-	div=(((long)grados_parametro)*96)/(360);
+	div=(grados_parametro*96)/(360);
 	return div;
 }
 
@@ -983,18 +923,6 @@ void enciende_led(void){
 		tiempo_LED=0;
 	}
 }
-
-/*void num_to_character(void){
-	unsigned int temperatura;
-	temperatura = operacionTemp();
-	command_tempeture[15] = ((char) temperatura % 10) + 0x30;
-	temperatura = temperatura/10;
-	command_tempeture[16] = ((char) temperatura % 10) + 0x30;
-	temperatura = temperatura/10;
-	command_tempeture[17] = ((char) temperatura % 10) + 0x30;
-	temperatura = temperatura/10;
-	command_tempeture[19] = ((char) temperatura % 10) + 0x30;
-}*/
 
 void check_temp(void){
 	if(temp_limit_LCD <= operacion()){
@@ -1064,6 +992,7 @@ void main(void) {
 	SCIBD = 26; //busclk 4Mhz, baud rate de 9600 bps  **Baud Rate Register
 	SCIC2 = 0b00101100; // TIE = 1, TE = 1, RE = 1  ***0b10101100   0x8C
 
+	/*************          Configuración ADC        *************/
 	ADCCFG = 0b00100000; // 4 = 1 Configuration Register ----> Long Sample Time Configuration (Conversion completa de 10 bits) ..0x10
 	ADCSC1 = 0b00100111; //Registro de ADC ----> AD7 canal cero
 	APCTL1_ADPC7=1;
@@ -1111,8 +1040,7 @@ void main(void) {
 				}
 				if(pos_linea_dos == 1){
 					send_linea();
-					state7++; // ----> Checar si se regresa el state7 a cero
-					//state6=0; // -----> CHECAR
+					state7++;
 				}
 				if(enviar_RPS == 1){
 					send_RPS();
@@ -1208,6 +1136,6 @@ void main(void) {
 				}
 			}
 		}
-		__RESET_WATCHDOG(); //Verificar si se apaga o no
+		__RESET_WATCHDOG(); 
 	} 
 }
