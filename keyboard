@@ -1,1 +1,315 @@
-A
+#include "project.h"
+#include "LiquidCrystal_I2C.h"
+
+ static uint8 columna = 0;
+ static uint8 filas = 0;
+ static uint8 banderona = 0;
+ static uint8 bEstados = 0; //state
+static uint8 bEstados2 = 0; //state2
+
+static uint8 estado = 1; //control_state
+static char caracter[] ="A";//single
+static char temporal = 'A';//single_temp
+
+static char posX = 0;//LCD_fila
+static uint16 cMisma = 0;//timer
+static char bMisma = 0;//flag
+static char bRapido = 0;//flag_move
+static char bNada = 0;//no se usa
+static int cBoton = 0;//no se usa
+static char paso = 1;//i
+static char columnatemp = 1;//column1
+static char filastemp = 1;//row1
+static char columnatemp2 = 1;//column_2
+static char filastemp2 = 1;//row_2
+static int espera = 1;//polling
+static int contador = 0;//counter
+static char bComparar = 0;//flag_match
+static char comando = 0;//boton
+static int delay = 0;//timer_delay
+static char posY = 0;//LCD_columna
+unsigned char bComando = 0;//boton_2
+
+
+//LCD
+const uint8_t Addr = 0x27; //Address for I2C Module
+char print_LCD[] = {"My_Pito"};
+
+CY_ISR(My_Pito){
+    banderona=1;
+    cMisma++;//timer
+    contador++;//counter
+    delay++;//timer_delay
+    if(delay == 1000){//timer_delay
+        delay = 0;//timer_delay
+        temporal = 'X';//single_temp
+    }
+    if(contador == espera){//counter <--> polling
+        contador = 0;//counter
+        bEstados2 = 1;//state2
+    }
+    if(bRapido == 0){//flag_move
+        if(cMisma == 5000){//timer
+            cMisma = 0;//timer
+           
+            if(filas == filastemp){//<--> row1
+                bMisma = 1;//flag
+                bRapido = 1;//flag_move
+                
+            }
+          
+   
+        }
+    }
+    else if(bRapido == 1){//flag_move
+        if(cMisma == 1000){//timer
+            cMisma = 0;//timer
+            
+            if(filas == filastemp){//<--> row1
+                 bMisma = 1;//flag
+                
+                
+            }
+            else{
+                bMisma = 0;//flag
+                bRapido=0;//flag_move
+            }
+        }
+    }
+    
+   
+}
+
+
+void lectura(void){
+    filas = Filas_Read();
+    
+  if(filas != 0){
+   bEstados = 1;//state
+    filastemp = filas;//row1 <--> 
+    columnatemp = columna;//column1
+    }
+    
+    if(filas == 8 && columna == 4){
+        bComando = 1;//boton_2
+    }
+    else if(columna == 4){
+        bComando = 0;//boton_2
+    }
+    
+    if(bComando == 1 && filas ==1 && columna == 3){//boton_2
+        comando = 1;//boton
+        
+    }
+   if(bComando == 1 && filas ==4 && columna == 2){//boton_2
+        comando = 2;//boton
+    }
+
+   
+}
+    
+void dato(int column){
+    if(column == columnatemp){// <--> column1
+        bComparar = 1;//flag_match
+    }
+    else{
+        bComparar = 0;//flag_match
+    }
+    if(column == 1){
+        columna = 1;
+        Columnas_Write(0b00000001);
+       
+        }
+    if(column == 2){
+        columna = 2;
+        Columnas_Write(0b00000010);
+        
+        }
+    if(column == 3){
+        columna = 3;
+        Columnas_Write(0b00000100);
+        
+        }
+    if(column == 4){
+        columna = 4;
+        Columnas_Write(0b00001000);
+        
+        }
+}
+
+void escritura(){
+   
+    LCD_print(caracter);  //single
+    setCursor(posX++,posY);//LCD_fila <--> //LCD_columna
+     if(posX == 16){//LCD_fila
+        posX = 0;//LCD_fila
+        posY = 1;//LCD_columna
+    }
+   bEstados2 = 0;//state2
+ 
+}
+void getChar(){
+
+    if(comando == 1){//boton
+        setCursor(0,1);
+           posX = 1;//LCD_fila
+            posY =1;//LCD_columna
+        
+        comando = 0;//boton
+      //  bComando = 0;
+    }
+    else if(comando == 2){//boton
+        clear();
+        posX = 1;//LCD_fila
+        posY =0;//LCD_columna
+        comando = 0;//boton
+       // bComando = 0;
+    }
+    else if(columna == 4){
+        if(filas == 1){
+            caracter[0] = '1';//single
+        }
+        
+        else if(filas == 2){
+            caracter[0] = '4';//single
+        }
+        else if(filas == 4){
+            caracter[0] = '7';//single
+        }
+         else if(filas == 9){
+            bComando = 1;//boton_2
+            setCursor(0,0);
+            posX = 1;//LCD_fila
+            posY =0;//LCD_columna
+        }
+        
+    }
+    
+   else  if(columna == 3){
+        if(filas == 1){
+            caracter[0] = '2';//single
+        }
+        else if(filas == 2){
+            caracter[0] = '5';//single
+        }
+        else if(filas == 4){
+            caracter[0] = '8';//single
+        }
+        else if(filas == 8){
+            caracter[0] = '0';//single
+        }
+    }
+    
+    else if(columna == 2){
+        if(filas == 1){
+            caracter[0] = '3';//single
+        }
+        else if(filas == 2){
+            caracter[0] = '6';//single
+        }
+        else if(filas == 4){
+            caracter[0] = '9';//single
+        }
+        else if(filas == 8){
+            caracter[0] = '#';//single
+        }
+    }
+   // columnatemp = columna;
+   // filastemp = filas;
+}
+
+void Estados(void){
+    if(estado == 0){//Inicial
+        espera = 1;//polling
+         contador = 0;//counter
+       getChar();
+    
+         if(bMisma == 1){//flag
+           bMisma = 0;//flag
+           estado = 2;
+            columnatemp2 = columnatemp; //column_2 <--> column1
+            filastemp2 = filastemp;//row_2 <--> row1
+        }
+    
+        else if(temporal != caracter[0] ){// <--> single
+            bEstados = 0;//state
+             estado = 1;
+           
+           
+        }
+        else{
+            estado = 0;
+        }
+     
+        
+    }
+   else if(estado == 1){//Escribir Diferentes
+         bEstados = 0;//state
+         espera = 600;//polling
+         contador = 0;//counter
+         estado = 0;
+
+          // bMisma = 0;
+         getChar();
+        if(bComando == 0){//boton_2
+            escritura();
+        }
+         temporal = caracter[0];//<--> single
+       
+      
+    }
+    
+   else if(estado == 2){//Escribir 
+         bEstados = 0;//state
+        estado = 2;
+        espera = 1000;//polling
+         contador = 0;//counter
+        escritura();
+        getChar();
+        if(filastemp2 != filastemp){//row_2 <--> row1
+            bMisma = 0;//flag
+            estado = 0;
+           // bRapido = 0;
+        }
+    
+    }
+   
+}
+
+int main(void)
+{
+    
+    //I2C Initialization
+    I2C_Start();
+    LiquidCrystal_I2C_init(Addr,16,2,0);
+    backlight();
+    begin();
+    cursor();
+    blink();
+    setCursor(0,0);
+    
+    CyGlobalIntEnable; /* Enable global interrupts. */
+    Timer_1_Start();
+    isr_1_StartEx(My_Pito);
+    
+    for(;;)
+    {
+       
+       if(banderona == 1 && paso <= 4){//  <--> i
+            banderona = 0;
+            dato(paso++);//i
+            lectura();
+            
+            if(bEstados == 1 && bEstados2 == 1){//state <--> state2
+               
+                Estados();
+            }
+            if(paso == 5){//i
+              paso = 1;   //i
+            }
+            
+        }
+    }
+}
+
+/* [] END OF FILE */
