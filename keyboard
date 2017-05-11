@@ -1,78 +1,98 @@
 #include "project.h"
 #include "LiquidCrystal_I2C.h"
 
- static uint8 columna = 0;
- static uint8 filas = 0;
- static uint8 banderona = 0;
- static uint8 bEstados = 0; //state
-static uint8 bEstados2 = 0; //state2
+static uint8 columna = 0;
+static uint8 filas = 0;
+static uint8 banderona = 0;
+static uint8 bEstados = 0;
+static uint8 bEstados2 = 0;
 
-static uint8 estado = 1; //control_state
-static char caracter[] ="A";//single
-static char temporal = 'A';//single_temp
+static uint8 estado = 1;
+static char caracter[] ="A";
+static char temporal = 'A';
+static char temporal2 = 'Z';
+static char temporal3 = 'W';
 
-static char posX = 0;//LCD_fila
-static uint16 cMisma = 0;//timer
-static char bMisma = 0;//flag
-static char bRapido = 0;//flag_move
-static char bNada = 0;//no se usa
-static int cBoton = 0;//no se usa
-static char paso = 1;//i
-static char columnatemp = 1;//column1
-static char filastemp = 1;//row1
-static char columnatemp2 = 1;//column_2
-static char filastemp2 = 1;//row_2
-static int espera = 1;//polling
-static int contador = 0;//counter
-static char bComparar = 0;//flag_match
-static char comando = 0;//boton
-static int delay = 0;//timer_delay
-static char posY = 0;//LCD_columna
-unsigned char bComando = 0;//boton_2
-
+static char posX = 0;
+static uint16 cMisma = 0;
+static char bMisma = 0;
+static char bRapido = 0;
+static char bNada = 0;
+static int cBoton = 0;
+static char paso = 1;
+static char columnatemp = 1;
+static char filastemp = 1;
+static char columnatemp2 = 1;
+static char filastemp2 = 1;
+static int espera = 1;
+static int contador = 0;
+static char bComparar = 0;
+static char comando = 0;
+static int delay = 0;
+static char posY = 0;
+static unsigned char bComando = 0;
+static int tdelay = 1000;
+static char m5 = 0;
+static int cSegundo = 0;
+static char bSegundo = 0;
+static int cWrite = 0;
+static int bWrite = 1;
+enum estado {s1,s2};
+struct Estructura {char caracter; char comando[8]; char estado[8];};
+struct Estructura Estructura;
 
 //LCD
-const uint8_t Addr = 0x27; //Address for I2C Module
+const uint8_t Addr = 0x3F; //Address for I2C Module
 char print_LCD[] = {"My_Pito"};
 
 CY_ISR(My_Pito){
     banderona=1;
-    cMisma++;//timer
-    contador++;//counter
-    delay++;//timer_delay
-    if(delay == 1000){//timer_delay
-        delay = 0;//timer_delay
-        temporal = 'X';//single_temp
+    cMisma++;
+    contador++;
+    delay++;
+    cSegundo++;
+    cWrite++;
+    if(cWrite == 1500){
+        cWrite = 0;
+        bWrite = 1;
     }
-    if(contador == espera){//counter <--> polling
-        contador = 0;//counter
-        bEstados2 = 1;//state2
+    if(cSegundo == 1100){
+        //temporal2 = 'Z';
+        tdelay = 5000;
     }
-    if(bRapido == 0){//flag_move
-        if(cMisma == 5000){//timer
-            cMisma = 0;//timer
+    if(delay == tdelay){
+        delay = 0;
+        temporal = 'X';
+    }
+    if(contador == espera){
+        contador = 0;
+        bEstados2 = 1;
+    }
+    if(bRapido == 0){
+        if(cMisma == 5000){
+            cMisma = 0;
            
-            if(filas == filastemp){//<--> row1
-                bMisma = 1;//flag
-                bRapido = 1;//flag_move
+            if(filas == filastemp){
+                bMisma = 1;
+                bRapido = 1;
                 
             }
           
    
         }
     }
-    else if(bRapido == 1){//flag_move
-        if(cMisma == 1000){//timer
-            cMisma = 0;//timer
+    else if(bRapido == 1){
+        if(cMisma == 1000){
+            cMisma = 0;
             
-            if(filas == filastemp){//<--> row1
-                 bMisma = 1;//flag
+            if(filas == filastemp){
+                 bMisma = 1;
                 
                 
             }
             else{
-                bMisma = 0;//flag
-                bRapido=0;//flag_move
+                bMisma = 0;
+                bRapido=0;
             }
         }
     }
@@ -85,35 +105,36 @@ void lectura(void){
     filas = Filas_Read();
     
   if(filas != 0){
-   bEstados = 1;//state
-    filastemp = filas;//row1 <--> 
-    columnatemp = columna;//column1
+   bEstados = 1;
+    filastemp = filas;
+    columnatemp = columna;
     }
     
     if(filas == 8 && columna == 4){
-        bComando = 1;//boton_2
+        bComando = 1;
     }
     else if(columna == 4){
-        bComando = 0;//boton_2
+        bComando = 0;
     }
     
-    if(bComando == 1 && filas ==1 && columna == 3){//boton_2
-        comando = 1;//boton
+    if(bComando == 1 && filas ==1 && columna == 3){
+        comando = 1;
         
     }
-   if(bComando == 1 && filas ==4 && columna == 2){//boton_2
-        comando = 2;//boton
+   if(bComando == 1 && filas ==4 && columna == 2){
+        comando = 2;
     }
+
 
    
 }
     
 void dato(int column){
-    if(column == columnatemp){// <--> column1
-        bComparar = 1;//flag_match
+    if(column == columnatemp){
+        bComparar = 1;
     }
     else{
-        bComparar = 0;//flag_match
+        bComparar = 0;
     }
     if(column == 1){
         columna = 1;
@@ -131,6 +152,7 @@ void dato(int column){
         
         }
     if(column == 4){
+        
         columna = 4;
         Columnas_Write(0b00001000);
         
@@ -138,80 +160,109 @@ void dato(int column){
 }
 
 void escritura(){
-   
-    LCD_print(caracter);  //single
-    setCursor(posX++,posY);//LCD_fila <--> //LCD_columna
-     if(posX == 16){//LCD_fila
-        posX = 0;//LCD_fila
-        posY = 1;//LCD_columna
+    cSegundo = 0;
+   temporal2 = caracter[0];
+    Estructura.caracter = caracter[0];
+    if(bWrite == 1){
+        LCD_print(caracter);
+        setCursor(posX++,posY);
     }
-   bEstados2 = 0;//state2
+   
+    
+     if(posX == 16){
+        posX = 0;
+        posY = 1;
+    }
+   bEstados2 = 0;
  
 }
 void getChar(){
 
-    if(comando == 1){//boton
+    if(comando == 1){
+        bWrite = 0;
+        cWrite = 0;
         setCursor(0,1);
-           posX = 1;//LCD_fila
-            posY =1;//LCD_columna
-        
-        comando = 0;//boton
+           posX = 1;
+            posY =1;
+           strcpy( Estructura.comando, "Linea 2");
+        comando = 0;
       //  bComando = 0;
     }
-    else if(comando == 2){//boton
+    else if(comando == 2){
+        bWrite = 0;
+        cWrite = 0;
         clear();
-        posX = 1;//LCD_fila
-        posY =0;//LCD_columna
-        comando = 0;//boton
+        posX = 1;
+        posY =0;
+        strcpy( Estructura.comando, "Home");
+        comando = 0;
        // bComando = 0;
     }
     else if(columna == 4){
         if(filas == 1){
-            caracter[0] = '1';//single
+            caracter[0] = '1';
         }
         
         else if(filas == 2){
-            caracter[0] = '4';//single
+            caracter[0] = '4';
         }
         else if(filas == 4){
-            caracter[0] = '7';//single
+            caracter[0] = '7';
         }
          else if(filas == 9){
-            bComando = 1;//boton_2
+            bWrite = 0;
+            cWrite = 0;
+            bComando = 1;
+            strcpy( Estructura.comando, "Linea 1");
             setCursor(0,0);
-            posX = 1;//LCD_fila
-            posY =0;//LCD_columna
+            posX = 1;
+            posY =0;
         }
         
     }
     
    else  if(columna == 3){
         if(filas == 1){
-            caracter[0] = '2';//single
+            caracter[0] = '2';
         }
         else if(filas == 2){
-            caracter[0] = '5';//single
+            caracter[0] = '5';
         }
         else if(filas == 4){
-            caracter[0] = '8';//single
+            caracter[0] = '8';
         }
         else if(filas == 8){
-            caracter[0] = '0';//single
+            caracter[0] = '0';
         }
     }
     
     else if(columna == 2){
         if(filas == 1){
-            caracter[0] = '3';//single
+            caracter[0] = '3';
         }
         else if(filas == 2){
-            caracter[0] = '6';//single
+            caracter[0] = '6';
         }
         else if(filas == 4){
-            caracter[0] = '9';//single
+            caracter[0] = '9';
         }
         else if(filas == 8){
-            caracter[0] = '#';//single
+            caracter[0] = '#';
+        }
+    }
+    
+     else if(columna == 1){
+        if(filas == 1){
+            caracter[0] = 'A';
+        }
+        else if(filas == 2){
+            caracter[0] = 'B';
+        }
+        else if(filas == 4){
+            caracter[0] = 'C';
+        }
+        else if(filas == 8){
+            caracter[0] = 'D';
         }
     }
    // columnatemp = columna;
@@ -219,74 +270,96 @@ void getChar(){
 }
 
 void Estados(void){
-    if(estado == 0){//Inicial
-        espera = 1;//polling
-         contador = 0;//counter
+    if(estado == s1){//Inicial
+       // strcpy( Estructura.estado, "Estado 1");
+        espera = 1;
+         contador = 0;
        getChar();
     
-         if(bMisma == 1){//flag
-           bMisma = 0;//flag
-           estado = 2;
-            columnatemp2 = columnatemp; //column_2 <--> column1
-            filastemp2 = filastemp;//row_2 <--> row1
-        }
+//         if(bMisma == 1){
+//           bMisma = 0;
+//           estado = 2;
+//            columnatemp2 = columnatemp;
+//            filastemp2 = filastemp;
+//        }
     
-        else if(temporal != caracter[0] ){// <--> single
-            bEstados = 0;//state
-             estado = 1;
-           
+        if(temporal != caracter[0] ){
+            bEstados = 0;
+             estado = s2;
+            temporal3 = caracter[0];
+           if(temporal2 == temporal3){
+                if(m5 == 0){
+                    m5 = 1;
+                    tdelay = 5000; 
+                }
+                else{
+                    tdelay = 1000;   
+                }
+             }
+            else{
+              m5 = 0;   
+               
+            }
            
         }
         else{
-            estado = 0;
+            estado = s1;
         }
      
         
     }
-   else if(estado == 1){//Escribir Diferentes
-         bEstados = 0;//state
-         espera = 600;//polling
-         contador = 0;//counter
-         estado = 0;
+   else if(estado == s2){//Escribir Diferentes
+       // strcpy( Estructura.estado, "Estado 2");
+         bEstados = 0;
+         espera = 600;
+//          temporal3 = caracter[0];
+//         if(temporal2 == temporal3){
+//            espera = 5000;  
+//        }
+         contador = 0;
+         estado = s1;
 
           // bMisma = 0;
          getChar();
-        if(bComando == 0){//boton_2
+        if(bComando == 0){
             escritura();
         }
-         temporal = caracter[0];//<--> single
-       
+         temporal = caracter[0];
+        
       
     }
     
-   else if(estado == 2){//Escribir 
-         bEstados = 0;//state
-        estado = 2;
-        espera = 1000;//polling
-         contador = 0;//counter
-        escritura();
-        getChar();
-        if(filastemp2 != filastemp){//row_2 <--> row1
-            bMisma = 0;//flag
-            estado = 0;
-           // bRapido = 0;
-        }
-    
-    }
+//    else if(estado == 2){//Escribir 
+//         bEstados = 0;
+//        estado = 2;
+//        espera = 1000;
+//         contador = 0;
+//        escritura();
+//        getChar();
+//        if(filastemp2 != filastemp){
+//            bMisma = 0;
+//            estado = 0;
+//           // bRapido = 0;
+//        }
+//
+//    }
    
 }
 
 int main(void)
 {
     
-    //I2C Initialization
-    I2C_Start();
-    LiquidCrystal_I2C_init(Addr,16,2,0);
-    backlight();
-    begin();
-    cursor();
-    blink();
-    setCursor(0,0);
+  //I2C Initialization
+  I2C_Start();
+  LiquidCrystal_I2C_init(Addr,16,2,0);
+  backlight();
+  begin();
+  cursor();
+  blink();
+  setCursor(0,0);
+
+   
+
     
     CyGlobalIntEnable; /* Enable global interrupts. */
     Timer_1_Start();
@@ -294,18 +367,25 @@ int main(void)
     
     for(;;)
     {
-       
-       if(banderona == 1 && paso <= 4){//  <--> i
+        
+//        if(temporal2 == temporal3){
+//            tdelay = 1000;
+//        }
+//       
+//        else{
+//            tdelay = 5000;   
+//        }
+       if(banderona == 1 && paso <= 4){
             banderona = 0;
-            dato(paso++);//i
+            dato(paso++);
             lectura();
             
-            if(bEstados == 1 && bEstados2 == 1){//state <--> state2
+            if(bEstados == 1 && bEstados2 == 1){
                
                 Estados();
             }
-            if(paso == 5){//i
-              paso = 1;   //i
+            if(paso == 5){
+              paso = 1;   
             }
             
         }
